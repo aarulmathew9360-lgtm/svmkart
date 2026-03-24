@@ -1,0 +1,62 @@
+{% extends 'base.html' %}
+
+{% block title %}Inventory Audit Trail{% endblock %}
+
+{% block content %}
+<div class="animate-fade">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h2 style="font-size: 1.125rem; color: var(--text-muted);">Stock Adjustment History</h2>
+        <div style="display: flex; gap: 1rem;">
+            <a href="{{ url_for('products') }}" class="btn btn-outline">
+                <i data-lucide="arrow-left"></i>
+                <span>Back to Products</span>
+            </a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date & Time</th>
+                        <th>Product</th>
+                        <th>User</th>
+                        <th>Change</th>
+                        <th>Reason</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in logs %}
+                    <tr class="animate-slide">
+                        <td>{{ log.date.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td style="font-weight: 600;">{{ log.product.name }}</td>
+                        <td>{{ log.user.username }}</td>
+                        <td>
+                            <span style="color: {% if log.change_qty > 0 %}var(--success){% else %}var(--danger){% endif %}; font-weight: 700;">
+                                {{ "+" if log.change_qty > 0 }}{{ log.change_qty }} {{ log.product.unit }}
+                            </span>
+                        </td>
+                        <td><span class="badge" style="background: rgba(255, 255, 255, 0.05);">{{ log.reason }}</span></td>
+                        <td>
+                            {% if log.reason == 'SALE' %}
+                                <span class="badge badge-warning">Deduction</span>
+                            {% elif log.reason == 'INITIAL' or log.reason == 'PURCHASE' %}
+                                <span class="badge badge-success">Addition</span>
+                            {% else %}
+                                <span class="badge badge-secondary">Adjustment</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: var(--text-muted);">No inventory logs found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

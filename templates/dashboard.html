@@ -1,0 +1,191 @@
+{% extends 'base.html' %}
+
+{% block title %}Dashboard Overview{% endblock %}
+
+{% block content %}
+<div class="grid grid-4 animate-fade">
+    <div class="card stat-card">
+        <div class="stat-icon" style="background: rgba(79, 70, 229, 0.1); color: var(--primary);">
+            <i data-lucide="indian-rupee"></i>
+        </div>
+        <div class="stat-info">
+            <h3>Today's Sales</h3>
+            <p>₹{{ "{:,.2f}".format(today_sales) }}</p>
+        </div>
+    </div>
+    <div class="card stat-card">
+        <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--success);">
+            <i data-lucide="file-text"></i>
+        </div>
+        <div class="stat-info">
+            <h3>Total Invoices</h3>
+            <p>{{ total_invoices }}</p>
+        </div>
+    </div>
+    <div class="card stat-card">
+        <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--warning);">
+            <i data-lucide="alert-triangle"></i>
+        </div>
+        <div class="stat-info">
+            <h3>Low Stock</h3>
+            <p>{{ low_stock_count }}</p>
+        </div>
+    </div>
+    <div class="card stat-card">
+        <div class="stat-icon" style="background: rgba(14, 165, 233, 0.1); color: var(--accent);">
+            <i data-lucide="trending-up"></i>
+        </div>
+        <div class="stat-info">
+            <h3>Growth</h3>
+            <p>+12.5%</p>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-2" style="margin-top: 2rem;">
+    <!-- Sales Analytics Chart -->
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2 style="font-size: 1.125rem;">Sales Analytics (Last 7 Days)</h2>
+            <i data-lucide="more-horizontal" style="color: var(--text-muted); cursor: pointer;"></i>
+        </div>
+        <div class="chart-container">
+            <canvas id="salesChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Recent Invoices -->
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2 style="font-size: 1.125rem;">Recent Invoices</h2>
+            <a href="{{ url_for('invoices') }}" class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;">View All</a>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Invoice No</th>
+                        <th>Customer</th>
+                        <th>Amount</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for invoice in recent_invoices %}
+                    <tr>
+                        <td style="font-weight: 600;">{{ invoice.invoice_no }}</td>
+                        <td>{{ invoice.customer.name if invoice.customer else 'Walk-in' }}</td>
+                        <td>₹{{ "{:,.2f}".format(invoice.final_amount) }}</td>
+                        <td><span class="badge badge-success">{{ invoice.status.upper() }}</span></td>
+                        <td>
+                            <a href="{{ url_for('generate_pdf', invoice_id=invoice.id) }}" style="color: var(--accent);">
+                                <i data-lucide="download" style="width: 16px;"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; color: var(--text-muted);">No invoices found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Low Stock Alerts -->
+{% if low_stock_items %}
+<div class="card animate-fade" style="margin-top: 2rem; border-left: 4px solid var(--danger);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--danger);">
+            <i data-lucide="alert-octagon"></i>
+            <h2 style="font-size: 1.125rem;">Critical Stock Alerts</h2>
+        </div>
+        <a href="{{ url_for('products') }}" class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; border-color: var(--danger); color: var(--danger);">Manage Inventory</a>
+    </div>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Category</th>
+                    <th>Current Stock</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in low_stock_items %}
+                <tr>
+                    <td style="font-weight: 600;">{{ item.name }}</td>
+                    <td>{{ item.category }}</td>
+                    <td style="font-weight: 700; color: {% if item.stock <= 0 %}var(--danger){% else %}var(--warning){% endif %};">{{ item.stock }} {{ item.unit }}</td>
+                    <td>
+                        {% if item.stock <= 0 %}
+                            <span class="badge badge-danger">Out of Stock</span>
+                        {% else %}
+                            <span class="badge badge-warning">Low Stock</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('salesChart').getContext('2d');
+    
+    // Gradient for chart
+    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+    gradient.addColorStop(0, 'rgba(79, 70, 229, 0.3)');
+    gradient.addColorStop(1, 'rgba(79, 70, 229, 0)');
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: JSON.parse('{{ labels|safe }}'),
+            datasets: [{
+                label: 'Sales (₹)',
+                data: JSON.parse('{{ sales_data|safe }}'),
+                borderColor: '#4f46e5',
+                borderWidth: 3,
+                tension: 0.4,
+                fill: true,
+                backgroundColor: gradient,
+                pointBackgroundColor: '#4f46e5',
+                pointBorderColor: '#fff',
+                pointBorderWidth: 2,
+                pointRadius: 4,
+                pointHoverRadius: 6
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#94a3b8' }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#94a3b8' }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

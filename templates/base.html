@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVMKART | Billing System</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    {% block head %}{% endblock %}
+</head>
+<body>
+    <aside class="sidebar">
+        <div class="logo">SVMKART</div>
+        <ul class="nav-links">
+            <li>
+                <a href="{{ url_for('dashboard') }}" class="{% if request.endpoint == 'dashboard' %}active{% endif %}" title="Dashboard [Alt+D]">
+                    <i data-lucide="layout-dashboard"></i>
+                    <span>Dashboard <small style="opacity:0.5; font-size: 0.6rem; float: right; margin-top:2px;">Alt+D</small></span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('billing') }}" class="{% if request.endpoint == 'billing' %}active{% endif %}" title="New Bill [Alt+N]">
+                    <i data-lucide="shopping-cart"></i>
+                    <span>New Bill <small style="opacity:0.5; font-size: 0.6rem; float: right; margin-top:2px;">Alt+N</small></span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('products') }}" class="{% if request.endpoint == 'products' %}active{% endif %}" title="Products [Alt+P]">
+                    <i data-lucide="package"></i>
+                    <span>Products <small style="opacity:0.5; font-size: 0.6rem; float: right; margin-top:2px;">Alt+P</small></span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('inventory_logs') }}" class="{% if request.endpoint == 'inventory_logs' %}active{% endif %}">
+                    <i data-lucide="clipboard-list"></i>
+                    <span>Stock Logs</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('customers') }}" class="{% if request.endpoint == 'customers' %}active{% endif %}">
+                    <i data-lucide="users"></i>
+                    <span>Customers</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('invoices') }}" class="{% if request.endpoint == 'invoices' %}active{% endif %}" title="Invoices [Alt+I]">
+                    <i data-lucide="file-text"></i>
+                    <span>Invoices <small style="opacity:0.5; font-size: 0.6rem; float: right; margin-top:2px;">Alt+I</small></span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('expenses') }}" class="{% if request.endpoint == 'expenses' %}active{% endif %}">
+                    <i data-lucide="wallet"></i>
+                    <span>Expenses</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('reports') }}" class="{% if request.endpoint == 'reports' %}active{% endif %}">
+                    <i data-lucide="bar-chart-3"></i>
+                    <span>Reports</span>
+                </a>
+            </li>
+            {% if current_user.role == 'admin' %}
+            <li style="margin-top: 1.5rem; padding: 0.5rem 1rem; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Administration</li>
+            <li>
+                <a href="{{ url_for('users') }}" class="{% if request.endpoint == 'users' %}active{% endif %}">
+                    <i data-lucide="shield-check"></i>
+                    <span>Manage Staff</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('settings') }}" class="{% if request.endpoint == 'settings' %}active{% endif %}">
+                    <i data-lucide="settings"></i>
+                    <span>Settings</span>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+        <div style="padding: 1rem; border-top: 1px solid var(--border-glass);">
+            <button id="theme-toggle" class="btn btn-outline" style="width: 100%; justify-content: center;">
+                <i data-lucide="moon" id="theme-icon"></i>
+                <span id="theme-text">Dark Mode</span>
+            </button>
+        </div>
+        <div class="logout-btn">
+            <a href="{{ url_for('logout') }}" class="btn btn-outline" style="width: 100%; justify-content: center;">
+                <i data-lucide="log-out"></i>
+                <span>Logout</span>
+            </a>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h1 style="font-size: 1.5rem;">{% block title %}Dashboard{% endblock %}</h1>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <span>{{ current_user.username }}</span>
+                <div style="width: 40px; height: 40px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700;">
+                    {{ current_user.username[0].upper() }}
+                </div>
+            </div>
+        </header>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="card badge-{{ category }}" style="margin-bottom: 1rem; padding: 1rem;">
+                {{ message }}
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+        lucide.createIcons();
+
+        // Theme Switcher Logic
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const themeText = document.getElementById('theme-text');
+        const body = document.body;
+
+        // Check for saved theme
+        if (localStorage.getItem('theme') === 'light') {
+            body.classList.add('light-mode');
+            updateThemeUI(true);
+        }
+
+        themeToggle.addEventListener('click', () => {
+            const isLight = body.classList.toggle('light-mode');
+            localStorage.setItem('theme', isLight ? 'light' : 'dark');
+            updateThemeUI(isLight);
+        });
+
+        function updateThemeUI(isLight) {
+            themeIcon.setAttribute('data-lucide', isLight ? 'sun' : 'moon');
+            themeText.innerText = isLight ? 'Light Mode' : 'Dark Mode';
+            lucide.createIcons(); // Refresh icons
+        }
+
+        // --- Keyboard Shortcuts (Power User Features) ---
+        document.addEventListener('keydown', function(event) {
+            // Ignore if user is typing in an input field
+            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' || event.target.tagName === 'SELECT') {
+                return;
+            }
+            
+            if (event.altKey) {
+                switch(event.key.toLowerCase()) {
+                    case 'n': // Alt + N: New Bill
+                        event.preventDefault();
+                        window.location.href = "{{ url_for('billing') }}";
+                        break;
+                    case 'p': // Alt + P: Products
+                        event.preventDefault();
+                        window.location.href = "{{ url_for('products') }}";
+                        break;
+                    case 'i': // Alt + I: Invoices
+                        event.preventDefault();
+                        window.location.href = "{{ url_for('invoices') }}";
+                        break;
+                    case 'd': // Alt + D: Dashboard
+                        event.preventDefault();
+                        window.location.href = "{{ url_for('dashboard') }}";
+                        break;
+                }
+            }
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

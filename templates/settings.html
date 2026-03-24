@@ -1,0 +1,146 @@
+{% extends 'base.html' %}
+
+{% block title %}Full System Upgrade | Settings{% endblock %}
+
+{% block content %}
+<div class="animate-fade" style="max-width: 900px; margin: 0 auto; padding-bottom: 4rem;">
+    
+    <div style="margin-bottom: 2rem; display: flex; align-items: center; gap: 1rem;">
+        <div style="background: var(--primary); color: white; width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);">
+            <i data-lucide="cog"></i>
+        </div>
+        <div>
+            <h2 style="font-size: 1.5rem; font-weight: 700;">Full System Settings</h2>
+            <p style="color: var(--text-muted); font-size: 0.875rem;">Configure your business identity and invoicing engine.</p>
+        </div>
+    </div>
+
+    <form action="{{ url_for('settings') }}" method="POST">
+        <!-- Section 1: Store Identity -->
+        <div class="card" style="margin-bottom: 2rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 1rem;">
+                <i data-lucide="home" style="color: var(--primary); width: 20px;"></i>
+                <h3 style="font-size: 1.125rem;">Store Identity</h3>
+            </div>
+            
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label>Store Name</label>
+                    <input type="text" name="store_name" value="{{ settings.store_name }}" required placeholder="e.g. SVMKART Mega Store">
+                </div>
+                <div class="form-group">
+                    <label>Business GSTIN (Tax ID)</label>
+                    <input type="text" name="gstin" value="{{ settings.gstin }}" placeholder="e.g. 33AAAAA0000A1Z5">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Physical Address</label>
+                <textarea name="store_address" rows="2" required placeholder="Complete store address...">{{ settings.store_address }}</textarea>
+            </div>
+
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label>Contact Number</label>
+                    <input type="text" name="store_contact" value="{{ settings.store_contact }}" required>
+                </div>
+                <div class="form-group">
+                    <label>Business Email</label>
+                    <input type="email" name="store_email" value="{{ settings.store_email }}" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Official Website</label>
+                <input type="url" name="store_website" value="{{ settings.store_website }}" placeholder="https://www.yourstore.com">
+            </div>
+        </div>
+
+        <!-- Section 2: Invoicing & Taxes -->
+        <div class="card" style="margin-bottom: 2rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 1rem;">
+                <i data-lucide="receipt" style="color: var(--success); width: 20px;"></i>
+                <h3 style="font-size: 1.125rem;">Invoicing & Taxes</h3>
+            </div>
+
+            <div class="grid grid-4" style="margin-bottom: 1.5rem;">
+                <div class="form-group">
+                    <label>Invoice Prefix</label>
+                    <input type="text" name="invoice_prefix" value="{{ settings.invoice_prefix }}" maxlength="5" required>
+                </div>
+                <div class="form-group">
+                    <label>Currency</label>
+                    <input type="text" name="currency_symbol" value="{{ settings.currency_symbol }}" required>
+                </div>
+                <div class="form-group" style="grid-column: span 2;">
+                    <label>Default Tax (GST %)</label>
+                    <input type="number" step="0.01" name="default_tax_rate" value="{{ settings.default_tax_rate }}" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Invoice Footer Note (Displayed on Bill)</label>
+                <input type="text" name="footer_note" value="{{ settings.footer_note }}" placeholder="e.g. Visit again!">
+            </div>
+
+            <div class="form-group">
+                <label>Terms & Conditions (Comma separated or steps)</label>
+                <textarea name="terms_conditions" rows="4" placeholder="1. Item once sold...
+2. Warranty details...">{{ settings.terms_conditions }}</textarea>
+            </div>
+        </div>
+
+        <!-- Section 3: Digital Payments -->
+        <div class="card" style="margin-bottom: 2rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 1rem;">
+                <i data-lucide="qr-code" style="color: var(--primary); width: 20px;"></i>
+                <h3 style="font-size: 1.125rem;">Digital Payments (UPI)</h3>
+            </div>
+            
+            <div class="form-group">
+                <label>Your UPI ID (VPA) for QR Generation</label>
+                <div style="position: relative;">
+                    <i data-lucide="at-sign" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); width: 18px;"></i>
+                    <input type="text" name="upi_id" value="{{ settings.upi_id }}" style="padding-left: 3rem;" placeholder="e.g. yourname@ybl or 9876543210@upi">
+                </div>
+                <p style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.5rem;">The system will automatically generate a dynamic payment QR on the bill when 'UPI' is selected as the payment method.</p>
+            </div>
+        </div>
+
+        <!-- Submit Bar -->
+        <div style="position: sticky; bottom: 2rem; z-index: 10; display: flex; justify-content: flex-end; gap: 1rem;">
+            <div class="card" style="padding: 0.75rem 2rem; display: flex; gap: 1rem; align-items: center; background: rgba(15, 23, 42, 0.9); border: 1px solid var(--primary);">
+                <span style="color: var(--text-muted); font-size: 0.875rem;">Ensure all fields are correct before saving.</span>
+                <button type="submit" class="btn btn-primary" style="padding: 0.75rem 2rem;">
+                    <i data-lucide="save"></i>
+                    <span>Apply Settings Upgrade</span>
+                </button>
+            </div>
+        </div>
+    </form>
+
+    <!-- Section 3: System Operations (Dangerous) -->
+    <div class="card" style="margin-top: 1rem; border-color: rgba(239, 68, 68, 0.2);">
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
+            <i data-lucide="shield-alert" style="color: var(--danger); width: 20px;"></i>
+            <h3 style="font-size: 1.125rem; color: var(--danger);">System Utilities</h3>
+        </div>
+        <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.875rem;">Manage database backups and system integrity.</p>
+        
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+            <button class="btn btn-outline" style="flex: 1; border-color: var(--success); color: var(--success);">
+                <i data-lucide="download-cloud"></i>
+                <span>Export Product List</span>
+            </button>
+            <button class="btn btn-outline" style="flex: 1; border-color: var(--accent); color: var(--accent);">
+                <i data-lucide="database"></i>
+                <span>Database Backup (.sql)</span>
+            </button>
+            <button class="btn btn-outline" style="flex: 1; border-color: var(--danger); color: var(--danger);" onclick="alert('Contact administrator for this action.')">
+                <i data-lucide="trash-2"></i>
+                <span>Reset Factory Settings</span>
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}

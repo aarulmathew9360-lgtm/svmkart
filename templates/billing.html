@@ -1,0 +1,374 @@
+{% extends 'base.html' %}
+
+{% block title %}Create New Invoice{% endblock %}
+
+{% block content %}
+<div class="billing-grid animate-fade">
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <div style="display: flex; align-items: center; gap: 1rem;">
+                <h2>Invoice Items</h2>
+                <div onclick="document.getElementById('barcode-modal').style.display='flex'; document.getElementById('manual-barcode').focus();" style="display: flex; align-items: center; gap: 0.5rem; background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.75rem; border: 1px solid var(--success); cursor: pointer; transition: all 0.3s ease;">
+                    <i data-lucide="scan-line" style="width: 14px; animation: pulse-red 2s infinite;"></i>
+                    <span>Scanner Ready / Click to type</span>
+                </div>
+            </div>
+            <button class="btn btn-outline" id="add-item-btn">
+                <i data-lucide="plus"></i>
+                <span>Add Custom Item</span>
+            </button>
+        </div>
+
+        <div id="items-container">
+            <!-- Header for items -->
+            <div class="item-row" style="font-weight: 700; color: var(--text-muted); border-bottom: 1px solid var(--border-glass); padding-bottom: 0.5rem; margin-bottom: 1rem;">
+                <div>Product</div>
+                <div>Price (₹)</div>
+                <div>Qty</div>
+                <div>Total</div>
+                <div></div>
+            </div>
+
+            <!-- Item rows will be added here -->
+        </div>
+
+        {% if products|length == 0 %}
+        <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+            No products found. Please <a href="{{ url_for('products') }}" style="color: var(--primary);">add products</a> first.
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h2 style="margin-bottom: 1.5rem;">Summary</h2>
+        
+        <div class="form-group">
+            <label>Select Customer</label>
+            <select id="customer-select">
+                <option value="">Walk-in Customer</option>
+                {% for customer in customers %}
+                <option value="{{ customer.id }}">{{ customer.name }} ({{ customer.phone }})</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div style="margin-top: 2rem; border-top: 1px solid var(--border-glass); padding-top: 1rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
+                <span color="var(--text-muted)">Subtotal</span>
+                <span id="subtotal">₹0.00</span>
+            </div>
+            <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+                <label style="margin-bottom: 0;">Discount (₹)</label>
+                <input type="number" id="discount-input" value="0" style="width: 100px; padding: 0.4rem;" onchange="updateTotals()">
+            </div>
+            <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
+                <label style="margin-bottom: 0;">Tax Rate (%)</label>
+                <input type="number" id="tax-input" value="{{ default_tax }}" style="width: 100px; padding: 0.4rem;" onchange="updateTotals()">
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
+                <span color="var(--text-muted)">Tax Amount</span>
+                <span id="tax-amount">₹0.00</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-top: 1rem; border-top: 1px solid var(--primary); padding-top: 1rem;">
+                <span style="font-weight: 700; font-size: 1.25rem;">Grand Total</span>
+                <span id="grand-total" style="font-weight: 700; font-size: 1.25rem; color: var(--success);">₹0.00</span>
+            </div>
+        </div>
+
+        <div class="form-group" style="margin-top: 2rem;">
+            <label>Payment Method</label>
+            <select id="payment-method">
+                <option value="Cash">Cash</option>
+                <option value="UPI">UPI / GPay / PhonePe</option>
+                <option value="Card">Credit / Debit Card</option>
+                <option value="COD">Cash on Delivery (COD)</option>
+                <option value="Pending">Payment Pending</option>
+            </select>
+        </div>
+
+        <button class="btn btn-primary" id="save-invoice-btn" style="width: 100%; justify-content: center; margin-top: 2rem; padding: 1rem;">
+            <i data-lucide="check-circle-2"></i>
+            <span>Complete & Save</span>
+        </button>
+    </div>
+</div>
+
+<!-- Modal for success/PDF -->
+<div id="success-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); z-index: 1001; align-items: center; justify-content: center; padding: 2rem;">
+    <div class="card animate-fade" style="width: 100%; max-width: 400px; text-align: center; padding: 3rem;">
+        <div id="paid-badge" style="background: var(--success); color: white; display: inline-block; padding: 0.5rem 1.5rem; border-radius: 0.5rem; font-weight: 800; font-size: 1.5rem; transform: rotate(-10deg); margin-bottom: 2rem; border: 4px double white; box-shadow: 0 0 0 2px var(--success);">PAID</div>
+        <h2 style="margin-bottom: 1rem;">Invoice Generated!</h2>
+        <p style="color: var(--text-muted); margin-bottom: 2rem;">The transaction has been recorded and stock is updated.</p>
+        <div style="display: grid; gap: 1rem; grid-template-columns: 1fr 1fr;">
+            <a id="download-link" href="#" class="btn btn-primary" style="justify-content: center; grid-column: span 2;">
+                <i data-lucide="file-text"></i>
+                <span>Download A4 Invoice</span>
+            </a>
+            <a id="thermal-link" href="#" class="btn btn-outline" style="justify-content: center; grid-column: span 2; border-color: var(--accent); color: var(--accent);">
+                <i data-lucide="printer"></i>
+                <span>Download Thermal Receipt (80mm)</span>
+            </a>
+            <button class="btn btn-outline" onclick="window.location.reload()" style="justify-content: center; grid-column: span 2;">Create Another Bill</button>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-outline" style="justify-content: center; grid-column: span 2;">Back to Dashboard</a>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Manual Barcode/Search -->
+<div id="barcode-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); z-index: 1001; align-items: center; justify-content: center; padding: 2rem;">
+    <div class="card animate-fade" style="width: 100%; max-width: 400px; padding: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h2 style="font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
+                <i data-lucide="scan-face" style="color: var(--primary);"></i> 
+                Scan / Type Item
+            </h2>
+            <i data-lucide="x" style="cursor: pointer; color: var(--text-muted);" onclick="document.getElementById('barcode-modal').style.display='none'"></i>
+        </div>
+        <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.5rem;">Type a product name or scan its barcode.</p>
+        <div class="form-group">
+            <input type="text" id="manual-barcode" placeholder="Enter code or name and press Enter..." style="font-size: 1rem; padding: 1rem;" autocomplete="off">
+        </div>
+        <button class="btn btn-primary" onclick="processManualBarcode()" style="width: 100%; justify-content: center;">
+            <i data-lucide="search"></i>
+            <span>Find & Add</span>
+        </button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const products = [
+        {% for p in products %}
+        {id: {{ p.id }}, name: "{{ p.name }}", price: {{ p.price }}, stock: {{ p.stock }}},
+        {% endfor %}
+    ];
+
+    const container = document.getElementById('items-container');
+    const addItemBtn = document.getElementById('add-item-btn');
+    const saveBtn = document.getElementById('save-invoice-btn');
+
+    function createItemRow() {
+        const rowId = 'row-' + Date.now();
+        const row = document.createElement('div');
+        row.className = 'item-row animate-slide';
+        row.id = rowId;
+        
+        row.innerHTML = `
+            <div>
+                <select class="product-select" onchange="updateRowPrice('${rowId}')" required>
+                    <option value="">Select Product...</option>
+                    ${products.map(p => `<option value="${p.id}">${p.name} (Stock: ${p.stock})</option>`).join('')}
+                </select>
+            </div>
+            <div>
+                <input type="number" class="price-input" step="0.01" readonly style="background: transparent; border: none;">
+            </div>
+            <div>
+                <input type="number" class="qty-input" value="1" min="1" onchange="updateTotals()">
+            </div>
+            <div>
+                <span class="row-total">₹0.00</span>
+            </div>
+            <div style="text-align: right;">
+                <i data-lucide="trash-2" style="color: var(--danger); outline: none; border: none; cursor: pointer; width: 18px;" onclick="removeRow('${rowId}')"></i>
+            </div>
+        `;
+        
+        container.appendChild(row);
+        lucide.createIcons();
+        updateTotals();
+    }
+
+    function removeRow(id) {
+        document.getElementById(id).remove();
+        updateTotals();
+    }
+
+    function updateRowPrice(rowId) {
+        const row = document.getElementById(rowId);
+        const prodId = row.querySelector('.product-select').value;
+        const product = products.find(p => p.id == prodId);
+        
+        if (product) {
+            row.querySelector('.price-input').value = product.price;
+        } else {
+            row.querySelector('.price-input').value = 0;
+        }
+        updateTotals();
+    }
+
+    function updateTotals() {
+        let subtotal = 0;
+        const rows = container.querySelectorAll('.item-row:not(:first-child)');
+        
+        rows.forEach(row => {
+            const price = parseFloat(row.querySelector('.price-input').value) || 0;
+            const qty = parseInt(row.querySelector('.qty-input').value) || 0;
+            const total = price * qty;
+            subtotal += total;
+            row.querySelector('.row-total').innerText = '₹' + total.toFixed(2);
+        });
+
+        const discount = parseFloat(document.getElementById('discount-input').value) || 0;
+        const taxRate = parseFloat(document.getElementById('tax-input').value) || 0;
+        
+        const discountedTotal = subtotal - discount;
+        const taxAmount = discountedTotal * (taxRate / 100);
+        const grandTotal = discountedTotal + taxAmount;
+
+        document.getElementById('subtotal').innerText = '₹' + subtotal.toFixed(2);
+        document.getElementById('tax-amount').innerText = '₹' + taxAmount.toFixed(2);
+        document.getElementById('grand-total').innerText = '₹' + grandTotal.toFixed(2);
+    }
+
+    // Add first row by default
+    if (products.length > 0) {
+        createItemRow();
+    }
+
+    addItemBtn.onclick = createItemRow;
+
+    saveBtn.onclick = async () => {
+        const items = [];
+        const rows = container.querySelectorAll('.item-row:not(:first-child)');
+        
+        rows.forEach(row => {
+            const product_id = row.querySelector('.product-select').value;
+            const quantity = row.querySelector('.qty-input').value;
+            const unit_price = row.querySelector('.price-input').value;
+            
+            if (product_id && quantity > 0) {
+                items.push({ product_id, quantity, unit_price });
+            }
+        });
+
+        if (items.length === 0) {
+            alert('Please add at least one product.');
+            return;
+        }
+
+        const data = {
+            customer_id: document.getElementById('customer-select').value,
+            items: items,
+            discount: parseFloat(document.getElementById('discount-input').value) || 0,
+            tax_rate: parseFloat(document.getElementById('tax-input').value) || 0,
+            payment_method: document.getElementById('payment-method').value
+        };
+
+        try {
+            saveBtn.disabled = true;
+            saveBtn.innerText = 'Baking invoice...';
+            
+            const response = await fetch('/billing', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                document.getElementById('download-link').href = '/invoice/pdf/' + result.invoice_id;
+                document.getElementById('thermal-link').href = '/invoice/thermal/' + result.invoice_id;
+                document.getElementById('success-modal').style.display = 'flex';
+                lucide.createIcons();
+            } else {
+                alert('Error: ' + result.message);
+                saveBtn.disabled = false;
+                saveBtn.innerText = 'Complete & Save';
+            }
+        } catch (error) {
+            console.error('Error saving invoice:', error);
+            alert('Something went wrong.');
+            saveBtn.disabled = false;
+        }
+    };
+
+    // --- ULTRA FEATURE: Barcode Scanner Listener ---
+    let barcodeBuffer = '';
+    let barcodeTimer = null;
+
+    document.addEventListener('keypress', function(e) {
+        // Ignore if user is manually typing in input fields
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+            return;
+        }
+
+        // Scanners usually send an 'Enter' key at the end of the barcode
+        if (e.key === 'Enter') {
+            if (barcodeBuffer.length > 0) {
+                processBarcode(barcodeBuffer);
+            }
+            barcodeBuffer = '';
+            clearTimeout(barcodeTimer);
+            return;
+        }
+
+        // Build the barcode
+        if (e.key !== 'Shift') {
+            barcodeBuffer += e.key;
+        }
+
+        // Reset buffer if typing is too slow (human typing vs scanner speed)
+        clearTimeout(barcodeTimer);
+        barcodeTimer = setTimeout(() => {
+            barcodeBuffer = '';
+        }, 50); // 50ms timeout threshold for scanners
+    });
+
+    // Handle manual entry modal
+    document.getElementById('manual-barcode').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            processManualBarcode();
+        }
+    });
+
+    function processManualBarcode() {
+        const input = document.getElementById('manual-barcode');
+        const code = input.value.trim();
+        if (code) {
+            processBarcode(code);
+            input.value = ''; // clear for next scan
+            document.getElementById('barcode-modal').style.display = 'none'; // Auto close
+        }
+    }
+
+    function processBarcode(barcode) {
+        // Match barcode (for now we assume barcode = product.id or name)
+        const matchedProduct = products.find(p => p.id == barcode || p.name.toLowerCase().includes(barcode.toLowerCase()));
+        
+        if (matchedProduct) {
+            let foundExisting = false;
+            const rows = container.querySelectorAll('.item-row:not(:first-child)');
+            
+            // Check if product is already in the list to increment config
+            rows.forEach(row => {
+                const selectElement = row.querySelector('.product-select');
+                if (selectElement && selectElement.value == matchedProduct.id) {
+                    const qtyInput = row.querySelector('.qty-input');
+                    qtyInput.value = parseInt(qtyInput.value) + 1;
+                    foundExisting = true;
+                }
+            });
+
+            if (!foundExisting) {
+                // Not in list, create new row
+                createItemRow();
+                const newRow = container.lastElementChild;
+                newRow.querySelector('.product-select').value = matchedProduct.id;
+                newRow.querySelector('.price-input').value = matchedProduct.price;
+            }
+            
+            updateTotals();
+            
+            // Visual success feedback
+            document.body.style.boxShadow = "inset 0 0 50px rgba(16, 185, 129, 0.3)";
+            setTimeout(() => { document.body.style.boxShadow = "none"; }, 200);
+            
+            // Notification sound (optional beep equivalent)
+            console.log('Barcode scanned: ' + matchedProduct.name);
+        }
+    }
+</script>
+{% endblock %}

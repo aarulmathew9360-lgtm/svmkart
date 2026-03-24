@@ -1,0 +1,222 @@
+{% extends 'base.html' %}
+
+{% block title %}Product Catalog{% endblock %}
+
+{% block content %}
+<div class="animate-fade">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h2 style="font-size: 1.125rem; color: var(--text-muted);">Total Products: {{ products|length }}</h2>
+        <div style="display: flex; gap: 1rem;">
+            <button class="btn btn-outline" onclick="document.getElementById('import-modal').style.display='flex'">
+                <i data-lucide="upload"></i>
+                <span>Import CSV</span>
+            </button>
+            <button class="btn btn-primary" onclick="document.getElementById('add-product-modal').style.display='flex'">
+                <i data-lucide="plus"></i>
+                <span>Add Product</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Product Name</th>
+                        <th>Category</th>
+                        <th>Price</th>
+                        <th>Stock</th>
+                        <th>Unit</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for product in products %}
+                    <tr>
+                        <td style="font-weight: 600;">{{ product.name }}</td>
+                        <td><span class="badge" style="background: rgba(79, 70, 229, 0.1); color: var(--primary);">{{ product.category }}</span></td>
+                        <td>₹{{ "{:,.2f}".format(product.price) }}</td>
+                        <td>{{ product.stock }}</td>
+                        <td>{{ product.unit }}</td>
+                        <td>
+                            {% if product.stock > product.min_stock %}
+                                <span class="badge badge-success">In Stock</span>
+                            {% elif product.stock > 0 %}
+                                <span class="badge badge-warning">Low Stock</span>
+                            {% else %}
+                                <span class="badge badge-danger">Out of Stock</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div style="display: flex; gap: 0.5rem;">
+                                <a href="javascript:void(0)" 
+                                   onclick="openEditModal('{{ product.id }}', '{{ product.name }}', '{{ product.category }}', '{{ product.price }}', '{{ product.stock }}', '{{ product.unit }}')"
+                                   style="color: var(--accent);">
+                                   <i data-lucide="edit-3" style="width: 18px;"></i>
+                                </a>
+                                <a href="{{ url_for('delete_product', product_id=product.id) }}" 
+                                   onclick="return confirm('Are you sure you want to delete this product?')"
+                                   style="color: var(--danger);">
+                                   <i data-lucide="trash-2" style="width: 18px;"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: var(--text-muted);">No products found. Click "Add Product" to create one.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal for Add Product -->
+<div id="add-product-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); z-index: 1001; align-items: center; justify-content: center; padding: 2rem;">
+    <div class="card animate-fade" style="width: 100%; max-width: 500px; padding: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h2 style="font-size: 1.25rem;">Add New Product</h2>
+            <i data-lucide="x" style="cursor: pointer; color: var(--text-muted);" onclick="document.getElementById('add-product-modal').style.display='none'"></i>
+        </div>
+        <form action="{{ url_for('add_product') }}" method="POST">
+            <div class="form-group">
+                <label>Product Name</label>
+                <input type="text" name="name" required placeholder="e.g. Wireless Mouse">
+            </div>
+            <div class="form-group">
+                <label>Category</label>
+                <input type="text" name="category" placeholder="e.g. Electronics" list="categories">
+                <datalist id="categories">
+                    <option value="Electronics">
+                    <option value="Grocery">
+                    <option value="Clothing">
+                    <option value="Stationery">
+                </datalist>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label>Price (₹)</label>
+                    <input type="number" step="0.01" name="price" required placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label>Initial Stock</label>
+                    <input type="number" name="stock" required placeholder="0">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Unit</label>
+                <select name="unit">
+                    <option value="pcs">Pieces (pcs)</option>
+                    <option value="kg">Kilogram (kg)</option>
+                    <option value="ltr">Liter (ltr)</option>
+                    <option value="box">Box</option>
+                    <option value="pkt">Packet</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 1rem; padding: 1rem;">
+                <span>Create Product</span>
+                <i data-lucide="save"></i>
+            </button>
+        </form>
+    </div>
+</div>
+<!-- Modal for CSV Import -->
+<div id="import-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 1001; align-items: center; justify-content: center; padding: 2rem;">
+    <div class="card animate-fade" style="width: 100%; max-width: 500px; padding: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h2 style="font-size: 1.25rem;">Bulk Import Products</h2>
+            <i data-lucide="x" style="cursor: pointer; color: var(--text-muted);" onclick="document.getElementById('import-modal').style.display='none'"></i>
+        </div>
+        
+        <div style="background: rgba(79, 70, 229, 0.05); border: 1px dashed var(--primary); padding: 1.5rem; border-radius: 0.75rem; margin-bottom: 2rem;">
+            <p style="font-size: 0.875rem; color: var(--text-muted); line-height: 1.6;">
+                <strong>CSV Format:</strong><br>
+                The file must contain these headers:<br>
+                <code>name, category, price, stock, unit</code>
+            </p>
+        </div>
+
+        <form action="{{ url_for('import_products') }}" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label>Select CSV File</label>
+                <input type="file" name="file" accept=".csv" required style="border: 1px solid var(--border-glass); padding: 1rem; cursor: pointer;">
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 1rem; padding: 1rem;">
+                <i data-lucide="upload-cloud"></i>
+                <span>Start Import</span>
+            </button>
+        </form>
+    </div>
+</div>
+<!-- Modal for Edit Product -->
+<div id="edit-product-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 1001; align-items: center; justify-content: center; padding: 2rem;">
+    <div class="card animate-fade" style="width: 100%; max-width: 500px; padding: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h2 style="font-size: 1.25rem;">Edit Product</h2>
+            <i data-lucide="x" style="cursor: pointer; color: var(--text-muted);" onclick="document.getElementById('edit-product-modal').style.display='none'"></i>
+        </div>
+        <form id="edit-product-form" method="POST">
+            <div class="form-group">
+                <label>Product Name</label>
+                <input type="text" name="name" id="edit-name" required>
+            </div>
+            <div class="form-group">
+                <label>Category</label>
+                <input type="text" name="category" id="edit-category" list="categories">
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label>Price (₹)</label>
+                    <input type="number" step="0.01" name="price" id="edit-price" required>
+                </div>
+                <div class="form-group">
+                    <label>Current Stock</label>
+                    <input type="number" name="stock" id="edit-stock" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Unit</label>
+                <select name="unit" id="edit-unit">
+                    <option value="pcs">Pieces (pcs)</option>
+                    <option value="kg">Kilogram (kg)</option>
+                    <option value="ltr">Liter (ltr)</option>
+                    <option value="box">Box</option>
+                    <option value="pkt">Packet</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 1rem; padding: 1rem;">
+                <span>Update Specifications</span>
+                <i data-lucide="refresh-cw"></i>
+            </button>
+        </form>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function openEditModal(id, name, category, price, stock, unit) {
+        const modal = document.getElementById('edit-product-modal');
+        const form = document.getElementById('edit-product-form');
+        
+        // Update form action
+        form.action = `/product/edit/${id}`;
+        
+        // Populate fields
+        document.getElementById('edit-name').value = name;
+        document.getElementById('edit-category').value = category;
+        document.getElementById('edit-price').value = price;
+        document.getElementById('edit-stock').value = stock;
+        document.getElementById('edit-unit').value = unit;
+        
+        // Show modal
+        modal.style.display = 'flex';
+        lucide.createIcons();
+    }
+</script>
+{% endblock %}

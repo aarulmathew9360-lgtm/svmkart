@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}Invoice History{% endblock %}
+
+{% block content %}
+<div class="animate-fade">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <form action="{{ url_for('invoices') }}" method="GET" style="display: flex; gap: 1rem; flex: 1; max-width: 400px;">
+            <div style="position: relative; flex: 1;">
+                <i data-lucide="search" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); width: 18px;"></i>
+                <input type="text" name="search" placeholder="Search invoice no..." style="padding-left: 3rem;" value="{{ request.args.get('search', '') }}">
+            </div>
+            <button type="submit" class="btn btn-outline">Search</button>
+        </form>
+    </div>
+
+    <div class="card">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Invoice No</th>
+                        <th>Customer</th>
+                        <th>Subtotal</th>
+                        <th>Tax</th>
+                        <th>Total Amount</th>
+                        <th>Payment</th>
+                        <th>Status</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for invoice in invoices %}
+                    <tr>
+                        <td>{{ invoice.date.strftime('%Y-%m-%d %H:%M') }}</td>
+                        <td style="font-weight: 600;">{{ invoice.invoice_no }}</td>
+                        <td>{{ invoice.customer.name if invoice.customer else 'Walk-in' }}</td>
+                        <td>₹{{ "{:,.2f}".format(invoice.total_amount) }}</td>
+                        <td>₹{{ "{:,.2f}".format(invoice.tax_amount) }} ({{ invoice.tax_rate }}%)</td>
+                        <td style="font-weight: 700; color: var(--success);">₹{{ "{:,.2f}".format(invoice.final_amount) }}</td>
+                        <td><small style="opacity:0.8;">{{ invoice.payment_method }}</small></td>
+                        <td><span class="badge badge-success">{{ invoice.status.upper() }}</span></td>
+                        <td style="display: flex; gap: 0.5rem;">
+                            <a href="{{ url_for('generate_pdf', invoice_id=invoice.id) }}" class="btn btn-outline" style="padding: 0.4rem; border-radius: 0.4rem; color: var(--primary); border-color: rgba(79, 70, 229, 0.2);" title="A4 Invoice">
+                                <i data-lucide="file-text" style="width: 16px;"></i>
+                            </a>
+                            <a href="{{ url_for('download_thermal', invoice_id=invoice.id) }}" class="btn btn-outline" style="padding: 0.4rem; border-radius: 0.4rem; color: var(--accent); border-color: rgba(14, 165, 233, 0.2);" title="Thermal Receipt">
+                                <i data-lucide="printer" style="width: 16px;"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="8" style="text-align: center; color: var(--text-muted);">No invoices found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

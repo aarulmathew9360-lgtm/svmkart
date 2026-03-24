@@ -1,0 +1,177 @@
+{% extends 'base.html' %}
+
+{% block title %}Sales Reports & Analytics{% endblock %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h1 style="font-size: 1.5rem;">Inventory & Sales Analytics</h1>
+    <div style="display: flex; gap: 0.5rem; background: var(--bg-card); padding: 0.25rem; border-radius: 0.75rem; border: 1px solid var(--border-glass);">
+        <a href="{{ url_for('reports', range='7days') }}" class="btn {% if current_range == '7days' %}btn-primary{% else %}btn-outline{% endif %}" style="padding: 0.5rem 1rem; font-size: 0.875rem; border: none;">7 Days</a>
+        <a href="{{ url_for('reports', range='30days') }}" class="btn {% if current_range == '30days' %}btn-primary{% else %}btn-outline{% endif %}" style="padding: 0.5rem 1rem; font-size: 0.875rem; border: none;">30 Days</a>
+        <a href="{{ url_for('reports', range='yearly') }}" class="btn {% if current_range == 'yearly' %}btn-primary{% else %}btn-outline{% endif %}" style="padding: 0.5rem 1rem; font-size: 0.875rem; border: none;">Yearly</a>
+    </div>
+</div>
+
+<div class="grid grid-2 animate-fade">
+    <!-- Financial Overview Summary -->
+    <div class="card" style="display: flex; flex-direction: column; justify-content: space-between;">
+        <h2 style="font-size: 1.125rem; margin-bottom: 2rem;">Financial Summary ({% if current_range == 'yearly' %}Yearly{% elif current_range == '7days' %}7 Days{% else %}30 Days{% endif %})</h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div style="background: rgba(16, 185, 129, 0.05); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid var(--success); opacity: 0.8;">
+                <span style="color: var(--success); font-size: 0.8rem;">Total Revenue</span>
+                <p style="font-size: 1.5rem; font-weight: 800; margin-top: 0.5rem; color: #fff;">₹{{ "{:,.2f}".format(total_sales) }}</p>
+            </div>
+            <div style="background: rgba(239, 68, 68, 0.05); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid var(--danger); opacity: 0.8;">
+                <span style="color: var(--danger); font-size: 0.8rem;">Total Expenses</span>
+                <p style="font-size: 1.5rem; font-weight: 800; margin-top: 0.5rem; color: #fff;">₹{{ "{:,.2f}".format(total_expenses) }}</p>
+            </div>
+        </div>
+        <div style="margin-top: 1rem; background: linear-gradient(135deg, rgba(79, 70, 229, 0.1), rgba(14, 165, 233, 0.1)); padding: 2rem; border-radius: 0.75rem; border: 1px solid var(--primary); text-align: center;">
+            <span style="color: var(--text-muted); font-size: 0.9rem;">Estimated Net Profit</span>
+            <p style="font-size: 2.25rem; font-weight: 900; margin-top: 0.5rem; color: var(--success);">₹{{ "{:,.2f}".format(net_profit) }}</p>
+        </div>
+    </div>
+
+    <!-- Revenue vs Expenses Chart -->
+    <div class="card">
+        <h2 style="font-size: 1.125rem; margin-bottom: 2rem;">Revenue vs Expenditures</h2>
+        <div class="chart-container">
+            <canvas id="mainSalesChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-2" style="margin-top: 2rem;">
+    <!-- Sales Summary Statistics -->
+    <div class="card">
+        <h2 style="font-size: 1.125rem; margin-bottom: 1.5rem;">Period Overview</h2>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+            <div style="background: rgba(255,255,255,0.03); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid var(--border-glass);">
+                <span style="color: var(--text-muted); font-size: 0.8rem;">Average Order Value</span>
+                <p style="font-size: 1.25rem; font-weight: 700; margin-top: 0.5rem;">₹1,420.00</p>
+            </div>
+            <div style="background: rgba(255,255,255,0.03); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid var(--border-glass);">
+                <span style="color: var(--text-muted); font-size: 0.8rem;">Customer Retention</span>
+                <p style="font-size: 1.25rem; font-weight: 700; margin-top: 0.5rem;">84%</p>
+            </div>
+            <div style="background: rgba(255,255,255,0.03); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid var(--border-glass);">
+                <span style="color: var(--text-muted); font-size: 0.8rem;">New Customers</span>
+                <p style="font-size: 1.25rem; font-weight: 700; margin-top: 0.5rem;">124</p>
+            </div>
+            <div style="background: rgba(255,255,255,0.03); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid var(--border-glass);">
+                <span style="color: var(--text-muted); font-size: 0.8rem;">Net Profit Trend</span>
+                <p style="font-size: 1.25rem; font-weight: 700; margin-top: 0.5rem; color: var(--success);">+18.2%</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card" style="display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
+        <i data-lucide="printer" style="width: 48px; height: 48px; color: var(--text-muted); margin-bottom: 1rem;"></i>
+        <h2>Generate Yearly Report</h2>
+        <p style="color: var(--text-muted); margin-bottom: 1.5rem;">Export full financial summary for tax and inventory auditing purposes.</p>
+        <button class="btn btn-outline">
+            <i data-lucide="file-down"></i>
+            <span>Export CSV</span>
+        </button>
+    </div>
+</div>
+
+<!-- Top Selling Products -->
+<div class="card" style="margin-top: 2rem;">
+    <h2 style="font-size: 1.125rem; margin-bottom: 2rem;">Top Selling Products</h2>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Product Name</th>
+                    <th>Total Sold Units</th>
+                    <th>Performance</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for name, qty in top_products %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td style="font-weight: 600;">{{ name }}</td>
+                    <td>{{ qty }} items</td>
+                    <td style="color: var(--success); font-weight: 600;">
+                        <div style="display: flex; align-items: center; gap: 0.25rem;">
+                            <i data-lucide="trending-up" style="width: 14px;"></i>
+                            <span>High Demand</span>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" style="text-align: center; color: var(--text-muted);">No product sales recorded in this period.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('mainSalesChart').getContext('2d');
+    
+    // Gradient
+    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+    gradient.addColorStop(0, 'rgba(14, 165, 233, 0.3)');
+    gradient.addColorStop(1, 'rgba(14, 165, 233, 0)');
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: JSON.parse('{{ labels|safe }}'),
+            datasets: [
+                {
+                    label: 'Revenue (₹)',
+                    data: JSON.parse('{{ sales_data|safe }}'),
+                    borderColor: '#0ea5e9',
+                    borderWidth: 3,
+                    tension: 0.3,
+                    fill: true,
+                    backgroundColor: gradient,
+                    pointBackgroundColor: '#0ea5e9'
+                },
+                {
+                    label: 'Expenses (₹)',
+                    data: JSON.parse('{{ expense_data|safe }}'),
+                    borderColor: '#ef4444',
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    tension: 0.3,
+                    fill: false,
+                    pointBackgroundColor: '#ef4444'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { 
+                    display: true,
+                    labels: { color: '#94a3b8' }
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#94a3b8' }
+                },
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#94a3b8' }
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SVMKART | Login</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body class="login-container">
+    <div style="position: fixed; top: 1.5rem; right: 1.5rem; z-index: 1002;">
+        <button id="theme-toggle" class="btn btn-outline" style="padding: 0.5rem; border-radius: 50%; width: 40px; height: 40px; justify-content: center;">
+            <i data-lucide="moon" id="theme-icon"></i>
+        </button>
+    </div>
+    <div class="card login-card animate-fade">
+        <div style="text-align: center; margin-bottom: 2rem;">
+            <div style="font-size: 2.5rem; font-weight: 800; background: linear-gradient(to right, #818cf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.5rem;">SVMKART</div>
+            <p style="color: var(--text-muted);">Access your billing dashboard</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+            {% for category, message in messages %}
+              <div class="badge badge-danger" style="margin-bottom: 1.5rem; text-align: center; display: block; padding: 0.5rem;">
+                {{ message }}
+              </div>
+            {% endfor %}
+          {% endif %}
+        {% endwith %}
+
+        <form action="{{ url_for('login') }}" method="POST">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <div style="position: relative;">
+                    <i data-lucide="user" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); width: 18px;"></i>
+                    <input type="text" id="username" name="username" placeholder="Enter username" style="padding-left: 3rem;" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <div style="position: relative;">
+                    <i data-lucide="lock" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); width: 18px;"></i>
+                    <input type="password" id="password" name="password" placeholder="••••••••" style="padding-left: 3rem;" required>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 1rem; padding: 1rem;">
+                <span>Sign In</span>
+                <i data-lucide="arrow-right"></i>
+            </button>
+        </form>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        // Theme Switcher Logic
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = document.getElementById('theme-icon');
+        const body = document.body;
+
+        if (localStorage.getItem('theme') === 'light') {
+            body.classList.add('light-mode');
+            updateThemeUI(true);
+        }
+
+        themeToggle.addEventListener('click', () => {
+            const isLight = body.classList.toggle('light-mode');
+            localStorage.setItem('theme', isLight ? 'light' : 'dark');
+            updateThemeUI(isLight);
+        });
+
+        function updateThemeUI(isLight) {
+            themeIcon.setAttribute('data-lucide', isLight ? 'sun' : 'moon');
+            lucide.createIcons();
+        }
+    </script>
+</body>
+</html>
