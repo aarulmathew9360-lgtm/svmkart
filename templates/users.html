@@ -28,7 +28,14 @@
                     {% for u in users %}
                     <tr>
                         <td>#{{ u.id }}</td>
-                        <td style="font-weight: 600;">{{ u.username }}</td>
+                        <td style="font-weight: 600; display: flex; align-items: center; gap: 0.75rem;">
+                            {% if u.profile_image and u.profile_image != 'default.png' %}
+                            <img src="{{ url_for('static', filename='uploads/profiles/' + u.profile_image) }}" alt="{{ u.username }}" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                            {% else %}
+                            <img src="https://api.dicebear.com/7.x/initials/svg?seed={{ u.username }}&backgroundColor=3b82f6,10b981,f59e0b&fontWeight=700" alt="{{ u.username }}" style="width: 32px; height: 32px; border-radius: 50%; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+                            {% endif %}
+                            {{ u.username }}
+                        </td>
                         <td>
                             <span class="badge {% if u.role == 'admin' %}badge-success{% else %}badge-warning{% endif %}">
                                 {{ u.role.upper() }}
@@ -36,10 +43,15 @@
                         </td>
                         <td>{{ u.created_at.strftime('%Y-%m-%d') }}</td>
                         <td>
-                            <div style="display: flex; gap: 0.5rem;">
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                {% if u.phone %}
+                                <a href="https://wa.me/{{ u.phone | wa_format }}?text=Hello%20{{ u.username }}," target="_blank" style="color: #25D366; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: rgba(37, 211, 102, 0.1); border-radius: 6px; transition: transform 0.2s;" onmouseover="this.style.transform='scale(1.1)'" onmouseout="this.style.transform='scale(1)'" title="Message on WhatsApp">
+                                    <i data-lucide="message-circle" style="width: 16px;"></i>
+                                </a>
+                                {% endif %}
                                 {% if u.id != current_user.id %}
-                                <a href="{{ url_for('delete_user', user_id=u.id) }}" onclick="return confirm('Relly remove this user?')" style="color: var(--danger);">
-                                    <i data-lucide="trash-2" style="width: 18px;"></i>
+                                <a href="{{ url_for('delete_user', user_id=u.id) }}" onclick="return confirm('Relly remove this user?')" style="color: var(--danger); display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; background: rgba(239, 68, 68, 0.1); border-radius: 6px;">
+                                    <i data-lucide="trash-2" style="width: 16px;"></i>
                                 </a>
                                 {% else %}
                                 <span style="color: var(--text-muted); font-size: 0.8rem;">(You)</span>
@@ -67,6 +79,13 @@
                 <div style="position: relative;">
                     <i data-lucide="user" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); width: 18px;"></i>
                     <input type="text" name="username" placeholder="Employee username" style="padding-left: 3rem;" required>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>WhatsApp Number</label>
+                <div style="position: relative;">
+                    <i data-lucide="smartphone" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); width: 18px;"></i>
+                    <input type="text" name="phone" placeholder="e.g. 91936XXXXXXXX" style="padding-left: 3rem;">
                 </div>
             </div>
             <div class="form-group">

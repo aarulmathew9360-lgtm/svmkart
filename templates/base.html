@@ -40,6 +40,18 @@
                 </a>
             </li>
             <li>
+                <a href="{{ url_for('suppliers') }}" class="{% if request.endpoint == 'suppliers' %}active{% endif %}">
+                    <i data-lucide="truck"></i>
+                    <span>Suppliers</span>
+                </a>
+            </li>
+            <li>
+                <a href="{{ url_for('inward') }}" class="{% if request.endpoint == 'inward' %}active{% endif %}">
+                    <i data-lucide="package-plus"></i>
+                    <span>Inward Stock</span>
+                </a>
+            </li>
+            <li>
                 <a href="{{ url_for('customers') }}" class="{% if request.endpoint == 'customers' %}active{% endif %}">
                     <i data-lucide="users"></i>
                     <span>Customers</span>
@@ -63,6 +75,12 @@
                     <span>Reports</span>
                 </a>
             </li>
+            <li>
+                <a href="{{ url_for('attendance_page') }}" class="{% if request.endpoint == 'attendance_page' %}active{% endif %}" title="View Attendance">
+                    <i data-lucide="clock"></i>
+                    <span>Attendance</span>
+                </a>
+            </li>
             {% if current_user.role == 'admin' %}
             <li style="margin-top: 1.5rem; padding: 0.5rem 1rem; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Administration</li>
             <li>
@@ -72,9 +90,21 @@
                 </a>
             </li>
             <li>
+                <a href="{{ url_for('hr_management') }}" class="{% if request.endpoint == 'hr_management' %}active{% endif %}">
+                    <i data-lucide="users"></i>
+                    <span>HR Management</span>
+                </a>
+            </li>
+            <li>
                 <a href="{{ url_for('settings') }}" class="{% if request.endpoint == 'settings' %}active{% endif %}">
                     <i data-lucide="settings"></i>
-                    <span>Settings</span>
+                    <span>System Settings</span>
+                </a>
+            </li>
+            <li>
+                <a href="javascript:void(0)" onclick="document.getElementById('payroll-modal').style.display='flex'">
+                    <i data-lucide="banknote"></i>
+                    <span>Run Payroll</span>
                 </a>
             </li>
             {% endif %}
@@ -96,12 +126,14 @@
     <main class="main-content">
         <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
             <h1 style="font-size: 1.5rem;">{% block title %}Dashboard{% endblock %}</h1>
-            <div style="display: flex; align-items: center; gap: 1rem;">
-                <span>{{ current_user.username }}</span>
-                <div style="width: 40px; height: 40px; background: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700;">
-                    {{ current_user.username[0].upper() }}
-                </div>
-            </div>
+            <a href="{{ url_for('profile') }}" style="display: flex; align-items: center; gap: 1rem; text-decoration: none; color: inherit; cursor: pointer; transition: transform 0.2s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
+                <span style="font-weight: 600;">{{ current_user.username }}</span>
+                {% if current_user.profile_image and current_user.profile_image != 'default.png' %}
+                <img src="{{ url_for('static', filename='uploads/profiles/' + current_user.profile_image) }}" alt="Avatar" style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; box-shadow: 0 4px 10px rgba(0,0,0,0.2); border: 2px solid rgba(255,255,255,0.1);">
+                {% else %}
+                <img src="https://api.dicebear.com/7.x/initials/svg?seed={{ current_user.username }}&backgroundColor=3b82f6,10b981,f59e0b&fontWeight=700" alt="Avatar" style="width: 40px; height: 40px; border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.2); border: 2px solid rgba(255,255,255,0.1);">
+                {% endif %}
+            </a>
         </header>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -116,6 +148,62 @@
 
         {% block content %}{% endblock %}
     </main>
+
+    {% if current_user.role == 'admin' %}
+    <!-- Payroll Modal -->
+    <div id="payroll-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 1002; align-items: center; justify-content: center; padding: 2rem;">
+        <div class="card animate-fade" style="width: 100%; max-width: 500px; padding: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <h2 style="font-size: 1.25rem;">Staff Payroll Management</h2>
+                <i data-lucide="x" style="cursor: pointer; color: var(--text-muted);" onclick="document.getElementById('payroll-modal').style.display='none'"></i>
+            </div>
+            <form action="{{ url_for('generate_payroll') }}" method="POST">
+                <div class="form-group">
+                    <label>Select Staff Member</label>
+                    <select name="user_id" required>
+                        {% for user in db.session.query(User).filter(User.role == 'staff').all() %}
+                        <option value="{{ user.id }}">{{ user.username }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label>Month</label>
+                        <select name="month">
+                            {% for i in range(1, 13) %}
+                            <option value="{{ i }}" {% if i == datetime.now().month %}selected{% endif %}>{{ i }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Year</label>
+                        <select name="year">
+                            <option value="{{ datetime.now().year }}">{{ datetime.now().year }}</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Basic Salary (₹)</label>
+                    <input type="number" name="base_salary" step="0.01" required placeholder="0.00">
+                </div>
+                <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 1rem;">
+                    <div class="form-group">
+                        <label>Bonus (₹)</label>
+                        <input type="number" name="bonus" step="0.01" value="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label>Deductions (₹)</label>
+                        <input type="number" name="deductions" step="0.01" value="0.00">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 1rem;">
+                    <i data-lucide="check"></i>
+                    <span>Generate Payroll Record</span>
+                </button>
+            </form>
+        </div>
+    </div>
+    {% endif %}
 
     <script>
         lucide.createIcons();

@@ -1,0 +1,272 @@
+{% extends 'base.html' %}
+
+{% block title %}User Profile Dashboard{% endblock %}
+
+{% block content %}
+<style>
+    /* Premium Profile Components */
+    .profile-sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+    }
+    
+    .glass-card {
+        background: rgba(var(--bg-card-rgb), 0.7);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 24px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+        padding: 2rem;
+    }
+
+    .badge-premium {
+        background: linear-gradient(135deg, #ffd700, #b8860b);
+        color: #000;
+        font-weight: 800;
+        padding: 0.25rem 0.75rem;
+        border-radius: 0.5rem;
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        box-shadow: 0 4px 10px rgba(184, 134, 11, 0.3);
+    }
+
+    .stat-mini {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .tab-active {
+        border-bottom: 2px solid var(--primary);
+        color: var(--primary) !important;
+        font-weight: 700;
+    }
+
+    .progress-bar {
+        height: 8px;
+        background: rgba(255,255,255,0.05);
+        border-radius: 99px;
+        overflow: hidden;
+    }
+
+    .progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary), var(--success));
+        border-radius: 99px;
+    }
+
+    .premium-input-group {
+        position: relative;
+        margin-bottom: 1.5rem;
+    }
+
+    .premium-input {
+        width: 100%;
+        background: rgba(0, 0, 0, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 14px;
+        padding: 1.1rem 1.1rem 1.1rem 3.5rem;
+        color: var(--text-base);
+        font-size: 1rem;
+        transition: all 0.3s ease;
+    }
+
+    .premium-input:focus {
+        border-color: var(--primary);
+        background: var(--bg-card);
+        box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15);
+        outline: none;
+    }
+
+    .premium-icon {
+        position: absolute;
+        left: 1.25rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-muted);
+        transition: all 0.3s ease;
+    }
+
+    .premium-input:focus ~ .premium-icon {
+        color: var(--primary);
+        transform: translateY(-50%) scale(1.1);
+    }
+
+    #profile_image_input { display: none; }
+
+    .recent-row {
+        padding: 1rem;
+        border-radius: 12px;
+        transition: all 0.2s;
+        border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+    
+    .recent-row:hover {
+        background: rgba(255,255,255,0.02);
+        transform: translateX(5px);
+    }
+</style>
+
+<div class="animate-fade" style="padding-bottom: 3rem;">
+    <!-- Top Greeting Area -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3rem; background: linear-gradient(90deg, rgba(59, 130, 246, 0.1), transparent); padding: 1.5rem; border-radius: 20px; border-left: 5px solid var(--primary);">
+        <div>
+            <h2 style="font-size: 2rem; font-weight: 800; letter-spacing: -1px;">Vanakam, <span style="background: linear-gradient(to right, var(--primary), var(--success)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">{{ current_user.username }}!</span></h2>
+            <p style="color: var(--text-muted); font-size: 1rem; margin-top: 0.25rem;">You're doing great! Keep up the momentum. 🚀</p>
+        </div>
+        <div style="text-align: right;">
+            <div class="badge-premium">
+                <i data-lucide="crown" style="width: 12px;"></i>
+                {{ rank }}
+            </div>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 0.5rem;">Member since {{ current_user.created_at.strftime('%Y') }}</p>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 350px 1fr; gap: 2.5rem; align-items: start;">
+        
+        <!-- LEFT COLUMN: Profile info & Account Edit -->
+        <div class="profile-sidebar">
+            <div class="glass-card" style="text-align: center;">
+                <label for="profile_image_input" style="cursor: pointer; display: inline-block; position: relative; width: 140px; height: 140px;">
+                    <div style="padding: 5px; background: linear-gradient(135deg, var(--primary), var(--success)); border-radius: 50%; box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);">
+                        {% if current_user.profile_image and current_user.profile_image != 'default.png' %}
+                        <img src="{{ url_for('static', filename='uploads/profiles/' + current_user.profile_image) }}" alt="PFP" style="width: 130px; height: 130px; border-radius: 50%; border: 4px solid var(--bg-card); object-fit: cover; display: block;">
+                        {% else %}
+                        <img src="https://api.dicebear.com/7.x/initials/svg?seed={{ current_user.username }}&backgroundColor=252830&textColor=ffffff&fontWeight=900" alt="PFP" style="width: 130px; height: 130px; border-radius: 50%; border: 4px solid var(--bg-card); display: block;">
+                        {% endif %}
+                    </div>
+                    <div style="position: absolute; bottom: 5px; right: 5px; background: var(--bg-card); color: var(--primary); width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);">
+                        <i data-lucide="camera" style="width: 16px;"></i>
+                    </div>
+                </label>
+                
+                <h3 style="font-size: 1.5rem; font-weight: 800; margin-top: 1.5rem;">{{ current_user.username }}</h3>
+                <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 2px;">{{ current_user.role }}</span>
+                
+                <div style="margin-top: 2rem; padding: 1.5rem; background: rgba(0,0,0,0.2); border-radius: 20px; text-align: left;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                        <span style="font-size: 0.85rem; color: var(--text-muted);">Points Progress</span>
+                        <span style="font-size: 0.85rem; font-weight: 700; color: var(--primary);">75%</span>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width: 75%;"></div>
+                    </div>
+                    <p style="font-size: 0.7rem; color: var(--text-muted); margin-top: 0.75rem;">₹{{ total_life_revenue }} total sales towards next Level.</p>
+                </div>
+            </div>
+
+            <div class="glass-card">
+                <h4 style="font-size: 1rem; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <i data-lucide="settings" style="width: 20px;"></i> Advanced Settings
+                </h4>
+                <form action="{{ url_for('update_profile') }}" method="POST" enctype="multipart/form-data">
+                    <input type="file" id="profile_image_input" name="profile_image" accept="image/*" onchange="this.form.submit();">
+                    
+                    <div class="premium-input-group">
+                        <input type="text" name="phone" value="{{ current_user.phone }}" class="premium-input" placeholder="WhatsApp Number" required>
+                        <i data-lucide="smartphone" class="premium-icon"></i>
+                    </div>
+                    
+                    <div class="premium-input-group">
+                        <input type="password" name="password" class="premium-input" placeholder="Secure New Password">
+                        <i data-lucide="lock" class="premium-icon"></i>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 1rem; border-radius: 12px;">
+                        Update Account
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- RIGHT COLUMN: Deep Stats & Activity -->
+        <div style="display: flex; flex-direction: column; gap: 2rem;">
+            
+            <!-- Statistics Row -->
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem;">
+                <div class="glass-card" style="padding: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <span style="background: rgba(59, 130, 246, 0.12); color: var(--primary); padding: 0.6rem; border-radius: 12px;"><i data-lucide="shopping-bag"></i></span>
+                        <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700;">TOTAL BILLS</span>
+                    </div>
+                    <h3 style="font-size: 1.75rem;">{{ total_life_bills }}</h3>
+                    <p style="font-size: 0.8rem; color: var(--success); margin-top: 0.5rem;"><i data-lucide="trending-up" style="width: 12px;"></i> Lifetime Volume</p>
+                </div>
+                
+                <div class="glass-card" style="padding: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <span style="background: rgba(16, 185, 129, 0.12); color: var(--success); padding: 0.6rem; border-radius: 12px;"><i data-lucide="indian-rupee"></i></span>
+                        <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700;">REVENUE</span>
+                    </div>
+                    <h3 style="font-size: 1.75rem;">₹{{ "%.0f"|format(total_life_revenue) }}</h3>
+                    <p style="font-size: 0.8rem; color: var(--success); margin-top: 0.5rem;"><i data-lucide="award" style="width: 12px;"></i> Achievement</p>
+                </div>
+
+                <div class="glass-card" style="padding: 1.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <span style="background: rgba(139, 92, 246, 0.12); color: #8b5cf6; padding: 0.6rem; border-radius: 12px;"><i data-lucide="calendar-check"></i></span>
+                        <span style="font-size: 0.7rem; color: var(--text-muted); font-weight: 700;">ATTENDANCE</span>
+                    </div>
+                    <h3 style="font-size: 1.75rem;">{{ month_attendance }} Days</h3>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">Consistent for Current Month</p>
+                </div>
+            </div>
+
+            <!-- Recent Activity List -->
+            <div class="glass-card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                    <h4 style="font-size: 1.25rem;">Recent Activity (Last 5 Sales)</h4>
+                    <a href="{{ url_for('invoices') }}" style="font-size: 0.85rem; color: var(--primary); text-decoration: none;">View All History</a>
+                </div>
+                
+                <div style="display: flex; flex-direction: column;">
+                    {% for inv in recent_activities %}
+                    <div class="recent-row">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                <div style="padding: 0.5rem; background: rgba(255,255,255,0.05); border-radius: 10px;">
+                                    <i data-lucide="receipt" style="width: 20px; color: var(--text-muted);"></i>
+                                </div>
+                                <div>
+                                    <h5 style="margin: 0; font-weight: 600;">Invoice #{{ inv.invoice_no }}</h5>
+                                    <p style="margin: 0; font-size: 0.75rem; color: var(--text-muted);">{{ inv.date.strftime('%B %d, %H:%M %p') }} • {{ inv.payment_method }}</p>
+                                </div>
+                            </div>
+                            <div style="text-align: right;">
+                                <span style="font-weight: 800; font-size: 1.1rem; color: var(--success);">₹{{ "%.2f"|format(inv.final_amount) }}</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p style="text-align: center; color: var(--text-muted); padding: 2rem;">No recent activities found.</p>
+                    {% endfor %}
+                </div>
+                
+                <div style="margin-top: 3rem; background: rgba(37, 211, 102, 0.08); border-radius: 20px; padding: 2rem; border: 1px solid rgba(37, 211, 102, 0.2); position: relative; overflow: hidden;">
+                    <div style="position: absolute; top: -20px; right: -20px; opacity: 0.05;">
+                        <i data-lucide="message-square" style="width: 150px; height: 150px; color: #25D366;"></i>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 1.5rem; position: relative; z-index: 1;">
+                        <div style="width: 60px; height: 60px; background: #25D366; border-radius: 18px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 10px 20px rgba(37, 211, 102, 0.3);">
+                            <i data-lucide="send" style="width: 28px;"></i>
+                        </div>
+                        <div style="flex: 1;">
+                            <h3 style="font-size: 1.25rem; color: #25D366;">End-of-Day E-Receipt</h3>
+                            <p style="color: var(--text-muted); font-size: 0.9rem;">Share your consolidated performance snapshot with management via WhatsApp.</p>
+                        </div>
+                        <a href="https://wa.me/{{ current_user.phone | wa_format }}?text=👋%20*Daily%20Performance%20Report*%0A👤%20*Staff:*%20{{ current_user.username }}%0A📅%20*Date:*%20{{ today_date }}%0A%E2%88%92%E2%88%92%E2%88%92%E2%88%92%E2%88%92%E2%88%92%E2%88%92%E2%88%92%E2%88%92%E2%88%92%E2%88%92%0A📜%20*Today%20Bills:*%20{{ today_bills_count }}%0A💰%20*Today%20Sales:*%20₹{{ today_sales }}%0A%F0%9F%8F%86%20*Current%20Rank:*%20{{ rank }}%0A%E2%88%92%E2%88%92%E2%88%92%E2%88%92%E2%88%92%E2%88%92%E2%88%92%E2%88%92%E2%88%92%E2%88%92%E2%88%92%0A_Generated%20via%20SVMKART%20Enterprise_" target="_blank" class="btn" style="background: #25D366; color: white; border-radius: 12px; padding: 0.8rem 1.5rem; font-weight: 700;">
+                            Send Report
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

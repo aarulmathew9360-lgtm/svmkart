@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+
+{% block title %}Supplier Management{% endblock %}
+
+{% block content %}
+<div class="animate-fade">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <p style="color: var(--text-muted);">Manage your product suppliers and procurement contacts.</p>
+        <button class="btn btn-primary" onclick="document.getElementById('supplier-modal').style.display='flex'">
+            <i data-lucide="plus"></i>
+            <span>Add New Supplier</span>
+        </button>
+    </div>
+
+    <div class="card">
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Supplier Name</th>
+                        <th>Contact</th>
+                        <th>GSTIN</th>
+                        <th>Address</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in suppliers %}
+                    <tr>
+                        <td>
+                            <div style="font-weight: 600;">{{ s.name }}</div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted);">{{ s.email }}</div>
+                        </td>
+                        <td>{{ s.contact }}</td>
+                        <td><span class="badge badge-success">{{ s.gstin or 'N/A' }}</span></td>
+                        <td style="max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{{ s.address }}</td>
+                        <td>
+                            <button class="btn btn-outline" style="padding: 0.4rem;" title="View History">
+                                <i data-lucide="history" style="width: 16px;"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if not suppliers %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 3rem; color: var(--text-muted);">
+                            No suppliers found. Click "Add New Supplier" to get started.
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Add Supplier Modal -->
+<div id="supplier-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 1002; align-items: center; justify-content: center; padding: 2rem;">
+    <div class="card animate-fade" style="width: 100%; max-width: 500px; padding: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h2 style="font-size: 1.25rem;">Add New Supplier</h2>
+            <i data-lucide="x" style="cursor: pointer; color: var(--text-muted);" onclick="document.getElementById('supplier-modal').style.display='none'"></i>
+        </div>
+        <form method="POST">
+            <div class="form-group">
+                <label>Supplier Name *</label>
+                <input type="text" name="name" required placeholder="e.g. Reliance Retail">
+            </div>
+            <div class="grid" style="grid-template-columns: 1fr 1fr; gap: 1rem;">
+                <div class="form-group">
+                    <label>Contact Number</label>
+                    <input type="text" name="contact" placeholder="+91 00000 00000">
+                </div>
+                <div class="form-group">
+                    <label>GSTIN</label>
+                    <input type="text" name="gstin" placeholder="GST Number">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Address</label>
+                <textarea name="address" rows="3" placeholder="Full business address"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 1rem;">
+                <i data-lucide="save"></i>
+                <span>Save Supplier</span>
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

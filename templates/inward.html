@@ -1,0 +1,197 @@
+{% extends 'base.html' %}
+
+{% block title %}Inward Stock (Procurement){% endblock %}
+
+{% block content %}
+<div class="billing-grid animate-fade">
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h2>Inward Item Entry</h2>
+            <button class="btn btn-outline" id="add-inward-item-btn">
+                <i data-lucide="plus"></i>
+                <span>Add Item</span>
+            </button>
+        </div>
+
+        <div id="inward-items-container">
+            <!-- Header for items -->
+            <div class="item-row" style="font-weight: 700; color: var(--text-muted); border-bottom: 1px solid var(--border-glass); padding-bottom: 0.5rem; margin-bottom: 1rem;">
+                <div>Product</div>
+                <div>Cost (₹)</div>
+                <div>Qty</div>
+                <div>Subtotal</div>
+                <div></div>
+            </div>
+
+            <!-- Item rows will be added here -->
+        </div>
+
+        {% if products|length == 0 %}
+        <div style="text-align: center; padding: 2rem; color: var(--text-muted);">
+            No products found. Please <a href="{{ url_for('products') }}" style="color: var(--primary);">add products</a> first.
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h2 style="margin-bottom: 1.5rem;">Procurement Summary</h2>
+        
+        <div class="form-group">
+            <label>Select Supplier</label>
+            <select id="supplier-select" required>
+                <option value="">Select Supplier...</option>
+                {% for s in suppliers %}
+                <option value="{{ s.id }}">{{ s.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div style="margin-top: 2rem; border-top: 1px solid var(--border-glass); padding-top: 1rem;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
+                <span color="var(--text-muted)">Total Inward Cost</span>
+                <span id="inward-total" style="font-weight: 700; font-size: 1.25rem; color: var(--accent);">₹0.00</span>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" id="save-inward-btn" style="width: 100%; justify-content: center; margin-top: 2rem; padding: 1rem; background: var(--accent);">
+            <i data-lucide="package-check"></i>
+            <span>Confirm & Update Stock</span>
+        </button>
+    </div>
+</div>
+
+<div id="products-data" style="display: none;" data-products='[{% for p in products %}{"id": {{ p.id }}, "name": "{{ p.name }}", "buy_price": {{ p.buy_price }}}{% if not loop.last %},{% endif %}{% endfor %}]'></div>
+
+<div id="purchase-success-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); z-index: 1001; align-items: center; justify-content: center; padding: 2rem;">
+    <div class="card animate-fade" style="width: 100%; max-width: 400px; text-align: center; padding: 3rem;">
+        <i data-lucide="check-circle" style="width: 64px; height: 64px; color: var(--success); margin-bottom: 1.5rem;"></i>
+        <h2 style="margin-bottom: 1rem;">Inward Stock Updated!</h2>
+        <p style="color: var(--text-muted); margin-bottom: 2rem;" id="purchase-no-para">Stock has been added successfully.</p>
+        <div style="display: grid; gap: 1rem;">
+            <button class="btn btn-primary" onclick="window.location.reload()" style="justify-content: center;">Add More Stock</button>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-outline" style="justify-content: center;">Back to Dashboard</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const products = JSON.parse(document.getElementById('products-data').dataset.products);
+    const container = document.getElementById('inward-items-container');
+    const addItemBtn = document.getElementById('add-inward-item-btn');
+    const saveBtn = document.getElementById('save-inward-btn');
+
+    function createInwardRow() {
+        const rowId = 'inrow-' + Date.now();
+        const row = document.createElement('div');
+        row.className = 'item-row animate-slide';
+        row.id = rowId;
+        
+        row.innerHTML = `
+            <div>
+                <select class="product-select" onchange="updateRowBuyPrice('${rowId}')" required>
+                    <option value="">Select Product...</option>
+                    ${products.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+                </select>
+            </div>
+            <div>
+                <input type="number" class="buy-price-input" step="0.01" value="0" onchange="updateInwardTotals()">
+            </div>
+            <div>
+                <input type="number" class="qty-input" value="1" min="1" onchange="updateInwardTotals()">
+            </div>
+            <div>
+                <span class="row-total">₹0.00</span>
+            </div>
+            <div style="text-align: right;">
+                <i data-lucide="trash-2" style="color: var(--danger); cursor: pointer; width: 18px;" onclick="removeRow('${rowId}')"></i>
+            </div>
+        `;
+        
+        container.appendChild(row);
+        lucide.createIcons();
+        updateInwardTotals();
+    }
+
+    function removeRow(id) {
+        document.getElementById(id).remove();
+        updateInwardTotals();
+    }
+
+    function updateRowBuyPrice(rowId) {
+        const row = document.getElementById(rowId);
+        const prodId = row.querySelector('.product-select').value;
+        const product = products.find(p => p.id == prodId);
+        
+        if (product) {
+            row.querySelector('.buy-price-input').value = product.buy_price;
+        }
+        updateInwardTotals();
+    }
+
+    function updateInwardTotals() {
+        let grandTotal = 0;
+        const rows = container.querySelectorAll('.item-row:not(:first-child)');
+        
+        rows.forEach(row => {
+            const price = parseFloat(row.querySelector('.buy-price-input').value) || 0;
+            const qty = parseInt(row.querySelector('.qty-input').value) || 0;
+            const total = price * qty;
+            grandTotal += total;
+            row.querySelector('.row-total').innerText = '₹' + total.toFixed(2);
+        });
+
+        document.getElementById('inward-total').innerText = '₹' + grandTotal.toFixed(2);
+    }
+
+    if (products.length > 0) createInwardRow();
+
+    addItemBtn.onclick = createInwardRow;
+
+    saveBtn.onclick = async () => {
+        const supplier_id = document.getElementById('supplier-select').value;
+        if (!supplier_id) { alert('Please select a supplier.'); return; }
+
+        const items = [];
+        const rows = container.querySelectorAll('.item-row:not(:first-child)');
+        
+        rows.forEach(row => {
+            const product_id = row.querySelector('.product-select').value;
+            const quantity = row.querySelector('.qty-input').value;
+            const buy_price = row.querySelector('.buy-price-input').value;
+            
+            if (product_id && quantity > 0) {
+                items.push({ product_id, quantity, buy_price });
+            }
+        });
+
+        if (items.length === 0) { alert('Please add at least one product.'); return; }
+
+        try {
+            saveBtn.disabled = true;
+            saveBtn.innerText = 'Updating Stock...';
+            
+            const response = await fetch('/inward', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ supplier_id, items })
+            });
+            
+            const result = await response.json();
+            if (result.success) {
+                document.getElementById('purchase-no-para').innerText = `Purchase Receipt Created: ${result.purchase_no}. Stock levels updated.`;
+                document.getElementById('purchase-success-modal').style.display = 'flex';
+                lucide.createIcons();
+            } else {
+                alert('Error: ' + result.message);
+                saveBtn.disabled = false;
+                saveBtn.innerText = 'Confirm & Update Stock';
+            }
+        } catch (error) {
+            alert('Something went wrong.');
+            saveBtn.disabled = false;
+        }
+    };
+</script>
+{% endblock %}

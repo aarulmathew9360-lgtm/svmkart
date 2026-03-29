@@ -2,7 +2,8 @@ import os
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from models import db, User, Product, Customer, Invoice, InvoiceItem, Settings, Expense, StockLog
+from werkzeug.utils import secure_filename
+from models import db, User, Product, Customer, Invoice, InvoiceItem, Settings, Expense, StockLog, Supplier, Purchase, PurchaseItem, Attendance, Payroll
 from datetime import datetime, timedelta
 import json
 import csv
@@ -24,9 +25,58 @@ login_manager = LoginManager()
 login_manager.login_view = 'login'
 login_manager.init_app(app)
 
+# Dynamic DB Auto-Upgrade
+with app.app_context():
+    try:
+        db.session.execute(db.text('ALTER TABLE user ADD COLUMN phone VARCHAR(20) DEFAULT ""'))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        
+    try:
+        db.session.execute(db.text('ALTER TABLE user ADD COLUMN profile_image VARCHAR(255) DEFAULT "default.png"'))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+    try:
+        db.session.execute(db.text('ALTER TABLE invoice_item ADD COLUMN buy_price FLOAT DEFAULT 0.0'))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return db.session.get(User, int(user_id))
+
+@app.context_processor
+def inject_globals():
+    return {
+        'db': db,
+        'User': User,
+        'Settings': Settings,
+        'Supplier': Supplier,
+        'Purchase': Purchase,
+        'datetime': datetime
+    }
+
+def wa_format(phone):
+    if not phone:
+        return ""
+    # Strip all non-numeric characters
+    clean = "".join(filter(str.isdigit, str(phone)))
+    # If it's a 10 digit number, prepend 91.
+    if len(clean) == 10:
+        return f"91{clean}"
+    elif clean.startswith("91") and len(clean) >= 12:
+        return clean
+    elif clean.startswith("0"):
+        return f"91{clean[1:]}"
+    return f"91{clean}"  # Fallback prepend 91
+
+@app.template_filter('wa_format')
+def wa_format_filter(phone):
+    return wa_format(phone)
 
 def admin_required(f):
     @wraps(f)
@@ -37,21 +87,7 @@ def admin_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-with app.app_context():
-    db.create_all()
-    # Check if a user exists, if not create default admin
-    if not User.query.filter_by(username='admin').first():
-        hashed_pw = generate_password_hash('admin123')
-        admin = User(username='admin', password=hashed_pw, role='admin')
-        db.session.add(admin)
-        db.session.commit()
-        print("Default admin created: admin / admin123")
-    
-    # Initialize default settings if none exist
-    if not Settings.query.first():
-        default_settings = Settings()
-        db.session.add(default_settings)
-        db.session.commit()
+# Database initialization moved to main block for safety
 
 # --- Authentication Routes ---
 @app.route('/login', methods=['GET', 'POST'])
@@ -73,6 +109,82 @@ def logout():
     logout_user()
     return redirect(url_for('login'))
 
+@app.route('/profile')
+@login_required
+def profile():
+    today = datetime.now().date()
+    
+    # Yesterday for comparison or other stats if needed
+    
+    # 1. Today's Performance
+    today_invoices = Invoice.query.filter(
+        db.func.date(Invoice.date) == today,
+        Invoice.user_id == current_user.id
+    ).all()
+    today_bills_count = len(today_invoices)
+    today_sales = sum(inv.final_amount for inv in today_invoices)
+    
+    # 2. All-Time Stats
+    all_time_invoices = Invoice.query.filter_by(user_id=current_user.id).all()
+    total_life_bills = len(all_time_invoices)
+    total_life_revenue = sum(inv.final_amount for inv in all_time_invoices)
+    
+    # 3. Attendance Stats (This month)
+    this_month = datetime.now().month
+    this_year = datetime.now().year
+    month_attendance = Attendance.query.filter(
+        Attendance.user_id == current_user.id,
+        db.extract('month', Attendance.date) == this_month,
+        db.extract('year', Attendance.date) == this_year,
+        Attendance.status == 'present'
+    ).count()
+    
+    # 4. Recent Activities (Last 5 Invoices)
+    recent_activities = Invoice.query.filter_by(user_id=current_user.id).order_by(Invoice.date.desc()).limit(5).all()
+    
+    # 5. User Rank/Level based on sales (Mock Logic)
+    rank = "Bronze Seller"
+    if total_life_revenue > 50000: rank = "Gold Seller"
+    elif total_life_revenue > 10000: rank = "Silver Seller"
+
+    return render_template('profile.html', 
+                           today_bills_count=today_bills_count, 
+                           today_sales=today_sales,
+                           total_life_bills=total_life_bills,
+                           total_life_revenue=total_life_revenue,
+                           month_attendance=month_attendance,
+                           recent_activities=recent_activities,
+                           rank=rank,
+                           today_date=today.strftime('%B %d, %Y'))
+
+@app.route('/profile/update', methods=['POST'])
+@login_required
+def update_profile():
+    new_phone = request.form.get('phone', '').strip()
+    new_pass = request.form.get('password', '').strip()
+    
+    # Fetch user explicitly to ensure session tracks the changes
+    user = db.session.get(User, current_user.id)
+    
+    # Handle optional image upload
+    if 'profile_image' in request.files:
+        file = request.files['profile_image']
+        if file and file.filename != '':
+            filename = secure_filename(f"user_{user.id}_{file.filename}")
+            upload_folder = os.path.join(app.root_path, 'static', 'uploads', 'profiles')
+            os.makedirs(upload_folder, exist_ok=True)
+            file.save(os.path.join(upload_folder, filename))
+            user.profile_image = filename
+            
+    if new_phone:
+        user.phone = new_phone
+    if new_pass:
+        user.password = generate_password_hash(new_pass)
+        
+    db.session.commit()
+    flash('Profile updated successfully!', 'success')
+    return redirect(url_for('profile'))
+
 # --- User Management ---
 @app.route('/users', methods=['GET', 'POST'])
 @login_required
@@ -82,12 +194,13 @@ def users():
         username = request.form.get('username')
         password = request.form.get('password')
         role = request.form.get('role')
+        phone = request.form.get('phone', '').strip()
         
         if User.query.filter_by(username=username).first():
             flash('Username already exists!', 'danger')
         else:
             hashed_pw = generate_password_hash(password)
-            new_user = User(username=username, password=hashed_pw, role=role)
+            new_user = User(username=username, password=hashed_pw, role=role, phone=phone)
             db.session.add(new_user)
             db.session.commit()
             flash(f'User {username} created successfully!', 'success')
@@ -113,16 +226,41 @@ def delete_user(user_id):
 @app.route('/dashboard')
 @login_required
 def dashboard():
-    today = datetime.utcnow().date()
+    today = datetime.now().date()
     yesterday = today - timedelta(days=1)
     
     # Calculate today's sales
     today_sales = db.session.query(db.func.sum(Invoice.final_amount)).filter(db.func.date(Invoice.date) == today).scalar() or 0.0
+    today_sales = float(today_sales)
     # Calculate total invoices
     total_invoices = Invoice.query.count()
     # Find low stock products
     low_stock = Product.query.filter(Product.stock <= Product.min_stock).all()
     
+    # Calculate revenue growth vs yesterday
+    yesterday_sales = db.session.query(db.func.sum(Invoice.final_amount)).filter(db.func.date(Invoice.date) == yesterday).scalar() or 0.0
+    yesterday_sales = float(yesterday_sales)
+    growth_pct = 0.0
+    if yesterday_sales > 0:
+        growth_pct = float((today_sales - yesterday_sales) / yesterday_sales) * 100
+    growth_pct = float(growth_pct)
+        
+    # Calculate total monthly profit (Sales - Buy Price * Qty)
+    first_day_of_month = today.replace(day=1)
+    monthly_profit = db.session.query(db.func.sum((InvoiceItem.unit_price - InvoiceItem.buy_price) * InvoiceItem.quantity))\
+        .join(Invoice).filter(db.func.date(Invoice.date) >= first_day_of_month).scalar() or 0.0
+    monthly_profit = float(monthly_profit)
+        
+    # Top 5 Selling Products
+    top_selling = db.session.query(Product.name, db.func.sum(InvoiceItem.quantity).label('total_qty'))\
+        .join(InvoiceItem, Product.id == InvoiceItem.product_id)\
+        .group_by(Product.id, Product.name).order_by(db.desc('total_qty')).limit(5).all()
+        
+    # Top 3 Customers by Spend
+    top_customers = db.session.query(Customer.name, db.func.sum(Invoice.final_amount).label('total_spend'))\
+        .join(Invoice, Customer.id == Invoice.customer_id)\
+        .group_by(Customer.id, Customer.name).order_by(db.desc('total_spend')).limit(3).all()
+        
     # Get last 7 days of sales for Chart.js
     labels = []
     data = []
@@ -130,15 +268,19 @@ def dashboard():
         day = today - timedelta(days=i)
         labels.append(day.strftime('%a'))
         sales = db.session.query(db.func.sum(Invoice.final_amount)).filter(db.func.date(Invoice.date) == day).scalar() or 0.0
-        data.append(sales)
+        data.append(float(sales))
         
-    recent_invoices = Invoice.query.order_by(Invoice.date.desc()).limit(5).all()
+    recent_invoices = Invoice.query.order_by(Invoice.date.desc()).limit(3).all()
     
     return render_template('dashboard.html', 
                            today_sales=today_sales, 
                            total_invoices=total_invoices, 
                            low_stock_count=len(low_stock),
-                           low_stock_items=low_stock[:5], # Send top 5 items for brief
+                           low_stock_items=low_stock[:5],
+                           growth_pct=growth_pct,
+                           monthly_profit=monthly_profit,
+                           top_selling=top_selling,
+                           top_customers=top_customers,
                            labels=json.dumps(labels),
                            sales_data=json.dumps(data),
                            recent_invoices=recent_invoices)
@@ -149,7 +291,13 @@ def dashboard():
 def products():
     search = request.args.get('search', '')
     if search:
-        all_products = Product.query.filter(Product.name.like(f"%{search}%")).all()
+        all_products = Product.query.filter(
+            db.or_(
+                Product.name.like(f"%{search}%"), 
+                Product.barcode == search,
+                Product.category.like(f"%{search}%")
+            )
+        ).all()
     else:
         all_products = Product.query.all()
     return render_template('products.html', products=all_products)
@@ -200,17 +348,47 @@ def add_product():
     price = request.form.get('price')
     stock = request.form.get('stock')
     unit = request.form.get('unit')
+    barcode = request.form.get('barcode', '').strip()
     
-    new_product = Product(name=name, category=category, price=float(price), stock=int(stock), unit=unit)
+    # Check if barcode already exists
+    if barcode and Product.query.filter_by(barcode=barcode).first():
+        flash(f'Barcode {barcode} is already assigned to another product!', 'danger')
+        return redirect(url_for('products'))
+        
+    new_product = Product(
+        name=name, 
+        category=category, 
+        price=float(price), 
+        stock=int(stock), 
+        unit=unit,
+        barcode=barcode if barcode else None
+    )
     db.session.add(new_product)
     db.session.flush()
     
+    # If no barcode provided, generate one: SVM[ID]
+    if not new_product.barcode:
+        new_product.barcode = f"890{new_product.id:09d}" # Mock EAN prefix
+        
     # Log initial stock
     initial_log = StockLog(product_id=new_product.id, user_id=current_user.id, change_qty=int(stock), reason="INITIAL")
     db.session.add(initial_log)
     
     db.session.commit()
-    flash(f'Product {name} added successfully!', 'success')
+    flash(f'Product {name} added with Barcode: {new_product.barcode}', 'success')
+    return redirect(url_for('products'))
+
+@app.route('/product/generate_missing_barcodes')
+@login_required
+@admin_required
+def generate_missing_barcodes():
+    products = Product.query.filter(Product.barcode == None).all()
+    count = 0
+    for p in products:
+        p.barcode = f"890{p.id:09d}" # Standard SVM barcode
+        count += 1
+    db.session.commit()
+    flash(f"Generated barcodes for {count} products!", "success")
     return redirect(url_for('products'))
 
 @app.route('/product/edit/<int:product_id>', methods=['POST'])
@@ -219,6 +397,7 @@ def edit_product(product_id):
     product = Product.query.get_or_404(product_id)
     product.name = request.form.get('name')
     product.category = request.form.get('category')
+    product.barcode = request.form.get('barcode')
     product.price = float(request.form.get('price'))
     product.stock = int(request.form.get('stock'))
     product.unit = request.form.get('unit')
@@ -227,14 +406,49 @@ def edit_product(product_id):
     flash(f'Product {product.name} updated successfully!', 'success')
     return redirect(url_for('products'))
 
+@app.route('/product/stock/update', methods=['POST'])
+@login_required
+def quick_stock_update():
+    data = request.json
+    product_id = data.get('product_id')
+    change = int(data.get('change', 0))
+    
+    product = Product.query.get(product_id)
+    if product:
+        product.stock += change
+        # Log the adjustment
+        log = StockLog(
+            product_id=product.id,
+            user_id=current_user.id,
+            change_qty=change,
+            reason='Quick Adjustment'
+        )
+        db.session.add(log)
+        db.session.commit()
+        return jsonify({'success': True, 'new_stock': product.stock})
+    return jsonify({'success': False, 'message': 'Product not found'})
+
 @app.route('/product/delete/<int:product_id>')
 @login_required
 def delete_product(product_id):
-    product = Product.query.get_or_404(product_id)
-    db.session.delete(product)
-    db.session.commit()
-    flash('Product deleted successfully!', 'success')
+    product = db.session.get(Product, product_id)
+    if not product:
+        flash('Product not found!', 'danger')
+        return redirect(url_for('products'))
+        
+    try:
+        # Delete stock logs first to satisfy FK constraints
+        StockLog.query.filter_by(product_id=product.id).delete()
+        
+        db.session.delete(product)
+        db.session.commit()
+        flash('Product deleted successfully!', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash('Cannot delete this product as it is linked to past invoices or transactions.', 'danger')
+        
     return redirect(url_for('products'))
+
 @app.route('/customers')
 @login_required
 def customers():
@@ -266,16 +480,26 @@ def billing():
         # Get data from AJAX/form
         data = request.json
         customer_id = data.get('customer_id')
-        customer_id = int(customer_id) if customer_id else None  # Walk-in = None
+        # Safely convert to int if it's a numeric string, otherwise None (Walk-in)
+        if customer_id and str(customer_id).strip() != "":
+            try:
+                customer_id = int(customer_id)
+            except ValueError:
+                customer_id = None
+        else:
+            customer_id = None
         items = data.get('items') # List of {product_id, quantity, unit_price}
         discount = float(data.get('discount', 0))
         tax_rate = float(data.get('tax_rate', 0))
         payment_method = data.get('payment_method', 'Cash')
+        redeem_points = data.get('redeem_points', False)
         
         # Generate Invoice No (PREFIX-2023-XXXX)
         settings = Settings.query.first()
         prefix = settings.invoice_prefix if settings else "SVM"
-        count = Invoice.query.count() + 1
+        # Get next ID safely instead of simple count
+        max_id = db.session.query(db.func.max(Invoice.id)).scalar() or 0
+        count = max_id + 1
         invoice_no = f"{prefix}-{datetime.now().strftime('%Y%m%d')}-{count:04d}"
         
         total_amount = 0
@@ -306,21 +530,23 @@ def billing():
                 if prod:
                     prod.stock -= qty
                 
-                product = Product.query.get(prod_id)
+                # Log stock deduction
+                stock_log = StockLog(product_id=prod_id, user_id=current_user.id, change_qty=-qty, reason="SALE")
+                db.session.add(stock_log)
+                
                 # Add to Invoice Items
+                product_item = db.session.get(Product, prod_id)
+                cost_price = product_item.buy_price if product_item else 0.0
+                
                 bill_item = InvoiceItem(
                     invoice_id=new_invoice.id,
                     product_id=prod_id,
                     quantity=qty,
                     unit_price=price,
-                    buy_price=product.buy_price, # Store current cost price
+                    buy_price=cost_price, 
                     subtotal=subtotal
                 )
                 db.session.add(bill_item)
-                
-                # Log stock deduction
-                stock_log = StockLog(product_id=prod_id, user_id=current_user.id, change_qty=-qty, reason="SALE")
-                db.session.add(stock_log)
             
             # Calculate final total
             tax_amount = (total_amount - discount) * (tax_rate / 100)
@@ -328,15 +554,50 @@ def billing():
             
             new_invoice.total_amount = total_amount
             new_invoice.tax_amount = tax_amount
+            
+            # Loyalty Points Logic
+            if customer_id and settings:
+                customer = db.session.get(Customer, customer_id)
+                if customer:
+                    if redeem_points:
+                        points_to_money = customer.points * (settings.loyalty_point_value or 0)
+                        discount += points_to_money
+                        customer.points = 0
+                    
+                    # Recalculate tax with new discount if points were redeemed
+                    tax_amount = (total_amount - discount) * (tax_rate / 100)
+                    final_amount = (total_amount - discount) + tax_amount
+                    
+                    # Reward points based on final amount
+                    if settings.loyalty_ratio and settings.loyalty_ratio > 0:
+                        reward_points = int(final_amount / settings.loyalty_ratio)
+                        customer.points += reward_points
+                
             new_invoice.final_amount = final_amount
+            new_invoice.discount = discount # update discount if points were redeemed
             
             db.session.commit()
-            return jsonify({'success': True, 'invoice_id': new_invoice.id, 'invoice_no': invoice_no})
+            
+            customer_phone = ""
+            if new_invoice.customer:
+                customer_phone = new_invoice.customer.phone
+                
+            store_name = settings.store_name if settings else "SVMKART"
+            
+            return jsonify({
+                'success': True, 
+                'invoice_id': new_invoice.id, 
+                'invoice_no': invoice_no,
+                'customer_phone': wa_format(customer_phone),
+                'final_amount': final_amount,
+                'store_name': store_name
+            })
         
         except Exception as e:
             db.session.rollback()
-            print(f"Billing Error: {e}")
-            return jsonify({'success': False, 'message': str(e)})
+            import traceback
+            traceback.print_exc() # This will show the real error in your terminal!
+            return jsonify({'success': False, 'message': f"Engine Error: {str(e)}"})
 
     # GET: Load billing page
     all_products = Product.query.all()
@@ -382,26 +643,29 @@ def reports():
     
     if range_type == '7days':
         start_date = today - timedelta(days=7)
-        group_by = db.func.date(Invoice.date)
+        group_by_invoice = db.func.date(Invoice.date)
+        group_by_expense = db.func.date(Expense.date)
         label_format = '%b %d'
     elif range_type == 'yearly':
         start_date = today.replace(month=1, day=1, hour=0, minute=0, second=0)
-        group_by = db.func.strftime('%Y-%m', Invoice.date)
+        group_by_invoice = db.func.strftime('%Y-%m', Invoice.date)
+        group_by_expense = db.func.strftime('%Y-%m', Expense.date)
         label_format = '%b %Y'
     else: # 30days
         start_date = today - timedelta(days=30)
-        group_by = db.func.date(Invoice.date)
+        group_by_invoice = db.func.date(Invoice.date)
+        group_by_expense = db.func.date(Expense.date)
         label_format = '%b %d'
 
     # Sales Data
     sales_query = db.session.query(
-        group_by.label('period'),
+        group_by_invoice.label('period'),
         db.func.sum(Invoice.final_amount).label('total')
     ).filter(Invoice.date >= start_date).group_by('period').order_by('period').all()
     
     # Expense Data
     expense_query = db.session.query(
-        group_by.label('period'),
+        group_by_expense.label('period'),
         db.func.sum(Expense.amount).label('total')
     ).filter(Expense.date >= start_date).group_by('period').order_by('period').all()
 
@@ -472,11 +736,223 @@ def settings():
         store_settings.invoice_prefix = request.form.get('invoice_prefix')
         store_settings.terms_conditions = request.form.get('terms_conditions')
         store_settings.footer_note = request.form.get('footer_note')
-        store_settings.upi_id = request.form.get('upi_id') # Save UPI ID
+        store_settings.upi_id = request.form.get('upi_id')
+        store_settings.default_printer = request.form.get('default_printer')
+        store_settings.store_logo = request.form.get('store_logo')
+        
         db.session.commit()
         flash('Settings updated successfully!', 'success')
         return redirect(url_for('settings'))
-    return render_template('settings.html', settings=store_settings)
+    
+    all_users = User.query.all()
+    return render_template('settings.html', settings=store_settings, users=all_users)
+
+@app.route('/settings/staff/add', methods=['POST'])
+@login_required
+@admin_required
+def add_staff():
+    username = request.form.get('username')
+    password = request.form.get('password')
+    role = request.form.get('role', 'staff')
+    
+    if User.query.filter_by(username=username).first():
+        flash('Username already exists!', 'danger')
+    else:
+        new_user = User(username=username, password=generate_password_hash(password), role=role)
+        db.session.add(new_user)
+        db.session.commit()
+        flash(f'Staff {username} added successfully!', 'success')
+    return redirect(url_for('settings'))
+
+@app.route('/settings/staff/delete/<int:user_id>')
+@login_required
+@admin_required
+def delete_staff(user_id):
+    if current_user.id == user_id:
+        flash('You cannot delete yourself!', 'danger')
+    else:
+        user = User.query.get_or_404(user_id)
+        if user.username == 'admin':
+            flash('Cannot delete the root admin!', 'danger')
+        else:
+            db.session.delete(user)
+            db.session.commit()
+            flash('Staff member removed.', 'success')
+    return redirect(url_for('settings'))
+
+# --- Staff Attendance & Payroll ---
+@app.route('/hr')
+@login_required
+@admin_required
+def hr_management():
+    attendances = Attendance.query.order_by(Attendance.date.desc()).all()
+    payrolls = Payroll.query.order_by(Payroll.year.desc(), Payroll.month.desc()).all()
+    return render_template('hr.html', attendances=attendances, payrolls=payrolls)
+
+@app.route('/attendance')
+@login_required
+def attendance_page():
+    # Only show current user's attendance log
+    attendances = Attendance.query.filter_by(user_id=current_user.id).order_by(Attendance.date.desc()).all()
+    today = datetime.now().date()
+    today_status = Attendance.query.filter_by(user_id=current_user.id, date=today).first()
+    return render_template('attendance.html', attendances=attendances, today_status=today_status)
+
+@app.route('/attendance/mark')
+@login_required
+def mark_attendance():
+    today = datetime.now().date()
+    attendance = Attendance.query.filter_by(user_id=current_user.id, date=today).first()
+    
+    if not attendance:
+        # Check-in
+        new_attendance = Attendance(user_id=current_user.id, date=today, check_in=datetime.utcnow(), status='present')
+        db.session.add(new_attendance)
+        flash('Checked-in successfully! Have a great day.', 'success')
+    elif not attendance.check_out:
+        # Check-out
+        attendance.check_out = datetime.utcnow()
+        flash('Checked-out successfully! See you tomorrow.', 'success')
+    else:
+        flash('You have already completed your attendance for today.', 'info')
+        
+    db.session.commit()
+    return redirect(request.referrer or url_for('dashboard'))
+
+@app.route('/payroll/generate', methods=['POST'])
+@login_required
+@admin_required
+def generate_payroll():
+    user_id = request.form.get('user_id')
+    month = int(request.form.get('month'))
+    year = int(request.form.get('year'))
+    base = float(request.form.get('base_salary', 0))
+    bonus = float(request.form.get('bonus', 0))
+    deduct = float(request.form.get('deductions', 0))
+    
+    # Check if already exists
+    existing = Payroll.query.filter_by(user_id=user_id, month=month, year=year).first()
+    if existing:
+        flash('Payroll already generated for this month/year.', 'warning')
+        return redirect(url_for('settings'))
+        
+    final = base + bonus - deduct
+    new_payroll = Payroll(
+        user_id=user_id, month=month, year=year, 
+        base_salary=base, bonus=bonus, deductions=deduct, 
+        final_pay=final, is_paid=False
+    )
+    db.session.add(new_payroll)
+    db.session.commit()
+    flash('Payroll record created successfully.', 'success')
+    return redirect(url_for('settings'))
+
+@app.route('/payroll/pay/<int:payroll_id>')
+@login_required
+@admin_required
+def pay_staff(payroll_id):
+    payroll = Payroll.query.get_or_404(payroll_id)
+    payroll.is_paid = True
+    payroll.payment_date = datetime.utcnow()
+    
+    # Add to internal expenses
+    expense = Expense(
+        category='Salary',
+        amount=payroll.final_pay,
+        description=f"Salary for {payroll.user.username} - {payroll.month}/{payroll.year}",
+        date=datetime.utcnow()
+    )
+    db.session.add(expense)
+    db.session.commit()
+    flash(f'Payment of ₹{payroll.final_pay} marked as completed.', 'success')
+    return redirect(url_for('settings'))
+    
+@app.route('/settings/reset', methods=['POST'])
+@login_required
+@admin_required
+def reset_factory():
+    try:
+        # Delete data from all tables except Users and Settings
+        # Using session.query().delete() for efficiency
+        db.session.query(InvoiceItem).delete()
+        db.session.query(Invoice).delete()
+        db.session.query(StockLog).delete()
+        db.session.query(Expense).delete()
+        db.session.query(Customer).delete()
+        db.session.query(Product).delete()
+        
+        # Keep only the admin user
+        admin_user = User.query.filter_by(username='admin').first()
+        User.query.filter(User.id != admin_user.id).delete()
+        
+        # Reset Settings to default
+        settings = Settings.query.first()
+        if settings:
+            settings.store_name = 'SVMKART'
+            settings.store_address = '123 Main St, City'
+            settings.store_contact = '+91 936XXXXXXX'
+            settings.store_email = 'support@svmcart.com'
+            settings.store_website = 'www.svmcart.com'
+            settings.gstin = ''
+            settings.upi_id = 'yourname@upi'
+            settings.default_tax_rate = 18.0
+            settings.currency_symbol = '₹'
+            settings.invoice_prefix = 'SVM'
+            settings.terms_conditions = '1. Goods once sold cannot be returned.\n2. Warranty as per manufacturer terms.'
+            settings.footer_note = 'Thank you for shopping with SVMKART!'
+            
+        db.session.commit()
+        flash('System has been reset to factory defaults successfully.', 'success')
+    except Exception as e:
+        db.session.rollback()
+        flash(f'Error during reset: {str(e)}', 'danger')
+        
+    return redirect(url_for('settings'))
+
+@app.route('/settings/export/products')
+@login_required
+def export_products():
+    products = Product.query.all()
+    output = BytesIO()
+    # Create CSV
+    header = ['ID', 'Name', 'Category', 'Price', 'Stock', 'Unit', 'Buy Price']
+    data = [[p.id, p.name, p.category, p.price, p.stock, p.unit, p.buy_price] for p in products]
+    
+    csv_content = ",".join(header) + "\n"
+    for row in data:
+        csv_content += ",".join([str(val) for val in row]) + "\n"
+        
+    output.write(csv_content.encode('utf-8'))
+    output.seek(0)
+    
+    return send_file(output, download_name=f"products_export_{datetime.now().strftime('%Y%m%d')}.csv", mimetype='text/csv')
+
+@app.route('/settings/backup/sql')
+@login_required
+@admin_required
+def backup_database():
+    # Since we use mysql, we can try to use mysqldump if available
+    # Or for a simpler cross-platform approach, we can dump to JSON
+    # But let's try a simple SQL-like format manually if mysqldump isn't easy
+    
+    # Actually, let's just use the 'mysql-connector' to get table info and dump
+    # For now, let's provide a 'Backup initiated' message and potentially a simple JSON dump
+    all_data = {
+        'products': [p.__dict__ for p in Product.query.all()],
+        'customers': [c.__dict__ for c in Customer.query.all()],
+        'settings': [s.__dict__ for s in Settings.query.all()]
+    }
+    # Remove SQLAlchemy overhead from dict
+    for key in all_data:
+        for item in all_data[key]:
+            item.pop('_sa_instance_state', None)
+            # Handle datetime if any (settings doesn't have it, but for future)
+            
+    output = BytesIO()
+    output.write(json.dumps(all_data, indent=4).encode('utf-8'))
+    output.seek(0)
+    
+    return send_file(output, download_name=f"svmkart_backup_{datetime.now().strftime('%Y%m%d')}.json", mimetype='application/json')
 
 # --- PDF Generation ---
 class PDF(FPDF):
@@ -702,6 +1178,88 @@ def download_thermal(invoice_id):
     output.seek(0)
     
     return send_file(output, download_name=f"receipt_{invoice.invoice_no}.pdf", mimetype='application/pdf')
+
+# --- Supplier & Inward Management ---
+@app.route('/suppliers', methods=['GET', 'POST'])
+@login_required
+def suppliers():
+    if request.method == 'POST':
+        name = request.form.get('name')
+        contact = request.form.get('contact')
+        address = request.form.get('address')
+        gstin = request.form.get('gstin')
+        
+        new_supplier = Supplier(name=name, contact=contact, address=address, gstin=gstin)
+        db.session.add(new_supplier)
+        db.session.commit()
+        flash('Supplier added successfully!', 'success')
+        return redirect(url_for('suppliers'))
+        
+    all_suppliers = Supplier.query.all()
+    return render_template('suppliers.html', suppliers=all_suppliers)
+
+@app.route('/inward', methods=['GET', 'POST'])
+@login_required
+def inward():
+    if request.method == 'POST':
+        data = request.json
+        supplier_id = data.get('supplier_id')
+        items = data.get('items') # List of {product_id, quantity, buy_price}
+        
+        purchase_no = f"PUR-{datetime.now().strftime('%Y%m%d')}-{Purchase.query.count() + 1:04d}"
+        
+        try:
+            new_purchase = Purchase(purchase_no=purchase_no, supplier_id=supplier_id)
+            db.session.add(new_purchase)
+            db.session.flush()
+            
+            total_amount = 0
+            for item in items:
+                pid = item.get('product_id')
+                qty = int(item.get('quantity'))
+                buy_price = float(item.get('buy_price'))
+                subtotal = qty * buy_price
+                total_amount += subtotal
+                
+                # Update product stock & cost price
+                product = Product.query.get(pid)
+                if product:
+                    product.stock += qty
+                    product.buy_price = buy_price # Update to latest cost price
+                
+                p_item = PurchaseItem(
+                    purchase_id=new_purchase.id,
+                    product_id=pid,
+                    quantity=qty,
+                    buy_price=buy_price,
+                    subtotal=subtotal
+                )
+                db.session.add(p_item)
+                
+                # Log stock addition
+                log = StockLog(product_id=pid, user_id=current_user.id, change_qty=qty, reason="PURCHASE")
+                db.session.add(log)
+            
+            new_purchase.total_amount = total_amount
+            
+            # Record as an expense automatically
+            expense = Expense(
+                category='Stock Purchase',
+                amount=total_amount,
+                description=f"Inward Stock Purchase: {purchase_no}",
+                date=datetime.utcnow()
+            )
+            db.session.add(expense)
+            
+            db.session.commit()
+            return jsonify({'success': True, 'purchase_no': purchase_no})
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({'success': False, 'message': str(e)})
+            
+    all_suppliers = Supplier.query.all()
+    all_products = Product.query.all()
+    return render_template('inward.html', suppliers=all_suppliers, products=all_products)
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))

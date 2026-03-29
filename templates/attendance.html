@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h1 style="font-size: 1.5rem; color: var(--text-base);">My Attendance</h1>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 2fr; gap: 2rem;">
+    <!-- Mark Attendance Actions -->
+    <div class="card" style="padding: 1.5rem; height: fit-content;">
+        <h2 style="font-size: 1.25rem; margin-bottom: 1rem; color: var(--primary-blue);">Today's Status</h2>
+        
+        <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 1.5rem;">
+            {% if not today_status %}
+                <p style="color: var(--text-muted);">You have not checked in today.</p>
+                <a href="{{ url_for('mark_attendance') }}" class="btn" style="background: rgb(16, 185, 129); color: white; justify-content: center; padding: 1rem; font-size: 1.1rem;">
+                    <i data-lucide="clock"></i> Check In Now
+                </a>
+            {% elif not today_status.check_out %}
+                <p style="color: var(--text-muted);">You checked in at <strong>{{ today_status.check_in.strftime('%H:%M %p') }}</strong>.</p>
+                <a href="{{ url_for('mark_attendance') }}" class="btn" style="background: rgb(245, 158, 11); color: white; justify-content: center; padding: 1rem; font-size: 1.1rem;">
+                    <i data-lucide="log-out"></i> Check Out Now
+                </a>
+            {% else %}
+                <div style="text-align: center; padding: 1.5rem; background: rgba(16, 185, 129, 0.1); border-radius: 8px;">
+                    <i data-lucide="check-circle" style="color: rgb(16, 185, 129); width: 32px; height: 32px; margin-bottom: 0.5rem;"></i>
+                    <p style="color: rgb(16, 185, 129); font-weight: 500;">Shift Completed</p>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 0.5rem;">
+                        In: {{ today_status.check_in.strftime('%H:%M %p') }} <br>
+                        Out: {{ today_status.check_out.strftime('%H:%M %p') }}
+                    </p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Attendance History -->
+    <div class="card" style="padding: 1.5rem;">
+        <h2 style="font-size: 1.25rem; margin-bottom: 1rem; color: var(--text-base);">My Recent Logs</h2>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-muted); text-align: left;">
+                        <th style="padding: 1rem 0.5rem;">Date</th>
+                        <th style="padding: 1rem 0.5rem;">Check In</th>
+                        <th style="padding: 1rem 0.5rem;">Check Out</th>
+                        <th style="padding: 1rem 0.5rem;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in attendances %}
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 1rem 0.5rem;">{{ log.date.strftime('%Y-%m-%d') }}</td>
+                        <td style="padding: 1rem 0.5rem;">{{ log.check_in.strftime('%H:%M %p') if log.check_in else '--' }}</td>
+                        <td style="padding: 1rem 0.5rem;">{{ log.check_out.strftime('%H:%M %p') if log.check_out else '--' }}</td>
+                        <td style="padding: 1rem 0.5rem;">
+                            <span style="background: rgba(16, 185, 129, 0.1); color: rgb(16, 185, 129); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.85rem; font-weight: 500;">
+                                {{ log.status|title }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" style="text-align: center; padding: 2rem; color: var(--text-muted);">No attendance records found yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+    <h1 style="font-size: 1.5rem; color: var(--text-base);">HR & Staff Management</h1>
+    <div style="display: flex; gap: 1rem;">
+        <button onclick="document.getElementById('payroll-modal').style.display='flex'" class="btn" style="background: var(--primary-base); color: white;">
+            <i data-lucide="indian-rupee"></i> Generate Payroll
+        </button>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 2rem;">
+    <!-- Attendance Table -->
+    <div class="card" style="padding: 1.5rem;">
+        <h2 style="font-size: 1.25rem; margin-bottom: 1rem; color: var(--primary-blue);">Recent Attendance Logs</h2>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-muted); text-align: left;">
+                        <th style="padding: 1rem 0.5rem;">Date</th>
+                        <th style="padding: 1rem 0.5rem;">Staff Name</th>
+                        <th style="padding: 1rem 0.5rem;">Check In</th>
+                        <th style="padding: 1rem 0.5rem;">Check Out</th>
+                        <th style="padding: 1rem 0.5rem;">Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for log in attendances %}
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 1rem 0.5rem;">{{ log.date.strftime('%Y-%m-%d') }}</td>
+                        <td style="padding: 1rem 0.5rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
+                            {% if log.user.profile_image and log.user.profile_image != 'default.png' %}
+                            <img src="{{ url_for('static', filename='uploads/profiles/' + log.user.profile_image) }}" alt="{{ log.user.username }}" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                            {% else %}
+                            <img src="https://api.dicebear.com/7.x/initials/svg?seed={{ log.user.username }}&backgroundColor=3b82f6,10b981,f59e0b&fontWeight=700" alt="{{ log.user.username }}" style="width: 28px; height: 28px; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                            {% endif %}
+                            {{ log.user.username }}
+                        </td>
+                        <td style="padding: 1rem 0.5rem;">{{ log.check_in.strftime('%H:%M %p') if log.check_in else '--' }}</td>
+                        <td style="padding: 1rem 0.5rem;">{{ log.check_out.strftime('%H:%M %p') if log.check_out else '--' }}</td>
+                        <td style="padding: 1rem 0.5rem;">
+                            <span style="background: rgba(16, 185, 129, 0.1); color: rgb(16, 185, 129); padding: 0.25rem 0.75rem; border-radius: 99px; font-size: 0.85rem; font-weight: 500;">
+                                {{ log.status|title }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">No attendance records found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Payroll Table -->
+    <div class="card" style="padding: 1.5rem;">
+        <h2 style="font-size: 1.25rem; margin-bottom: 1rem; color: var(--primary-blue);">Payroll History</h2>
+        <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--border-color); color: var(--text-muted); text-align: left;">
+                        <th style="padding: 1rem 0.5rem;">Month/Year</th>
+                        <th style="padding: 1rem 0.5rem;">Staff</th>
+                        <th style="padding: 1rem 0.5rem;">Final Pay</th>
+                        <th style="padding: 1rem 0.5rem;">Status</th>
+                        <th style="padding: 1rem 0.5rem;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pay in payrolls %}
+                    <tr style="border-bottom: 1px solid var(--border-color);">
+                        <td style="padding: 1rem 0.5rem;">{{ pay.month }}/{{ pay.year }}</td>
+                        <td style="padding: 1rem 0.5rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;">
+                            {% if pay.user.profile_image and pay.user.profile_image != 'default.png' %}
+                            <img src="{{ url_for('static', filename='uploads/profiles/' + pay.user.profile_image) }}" alt="{{ pay.user.username }}" style="width: 28px; height: 28px; border-radius: 50%; object-fit: cover; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                            {% else %}
+                            <img src="https://api.dicebear.com/7.x/initials/svg?seed={{ pay.user.username }}&backgroundColor=3b82f6,10b981,f59e0b&fontWeight=700" alt="{{ pay.user.username }}" style="width: 28px; height: 28px; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.1);">
+                            {% endif %}
+                            {{ pay.user.username }}
+                        </td>
+                        <td style="padding: 1rem 0.5rem;">₹{{ "%.2f"|format(pay.final_pay) }}</td>
+                        <td style="padding: 1rem 0.5rem;">
+                            {% if pay.is_paid %}
+                            <span style="color: rgb(16, 185, 129); font-weight: 500;">Paid on {{ pay.payment_date.strftime('%d %b') }}</span>
+                            {% else %}
+                            <span style="color: rgb(245, 158, 11); font-weight: 500;">Pending</span>
+                            {% endif %}
+                        </td>
+                        <td style="padding: 1rem 0.5rem;">
+                            {% if not pay.is_paid %}
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <a href="{{ url_for('pay_staff', payroll_id=pay.id) }}" class="btn" style="background: rgba(16, 185, 129, 0.1); color: rgb(16, 185, 129); padding: 0.4rem 0.8rem; font-size: 0.8rem;">
+                                    Mark Paid
+                                </a>
+                                {% if pay.user.phone %}
+                                <a href="https://wa.me/{{ pay.user.phone | wa_format }}?text=Hello%20{{ pay.user.username }},%0AYour%20salary%20for%20{{ pay.month }}/{{ pay.year }}%20of%20Rs.{{ "%.2f"|format(pay.final_pay) }}%20is%20pending.%20Please%20collect." target="_blank" class="btn" style="background: rgba(37, 211, 102, 0.1); color: #25D366; padding: 0.4rem; font-size: 0.8rem;" title="Notify Pending via WhatsApp">
+                                    <i data-lucide="message-circle" style="width: 16px;"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                            {% else %}
+                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                <span style="color: var(--success);" title="Paid Successfully"><i data-lucide="check-circle" style="width: 20px; height: 20px;"></i></span>
+                                {% if pay.user.phone %}
+                                <a href="https://wa.me/{{ pay.user.phone | wa_format }}?text=Hello%20{{ pay.user.username }},%0A%F0%9F%92%B0%20Your%20salary%20for%20*{{ pay.month }}/{{ pay.year }}*%20of%20*Rs.{{ "%.2f"|format(pay.final_pay) }}*%20has%20been%20Paid%20on%20{{ pay.payment_date.strftime('%d %b') }}.%0A%0A_Sent%20from%20SVMKART%20HR_" target="_blank" class="btn" style="background: rgba(37, 211, 102, 0.1); color: #25D366; padding: 0.4rem 0.8rem; font-size: 0.85rem;" title="Send Digital Payslip">
+                                    <i data-lucide="send" style="width: 14px;"></i> Payslip
+                                </a>
+                                {% endif %}
+                            </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" style="text-align: center; padding: 2rem; color: var(--text-muted);">No payroll records found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

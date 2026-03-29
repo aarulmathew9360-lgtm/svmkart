@@ -1,5 +1,5 @@
 # MIGRATE START
-print("🏁 Starting Advanced Database Fix (Loyalty & Staff)...")
+print("🏁 Starting Database Fix...")
 import os
 import sys
 
@@ -17,15 +17,13 @@ def migrate():
         engine = db.engine
         print(f"🔗 Connected to: {engine.url}")
         
-        # List of columns and tables to add
+        # List of columns to add
         updates = [
-            # Loyalty
-            ("customer", "points", "INTEGER DEFAULT 0"),
-            ("settings", "loyalty_point_value", "FLOAT DEFAULT 1.0"),
-            ("settings", "loyalty_ratio", "INTEGER DEFAULT 100")
+            ("product", "barcode", "VARCHAR(50) UNIQUE"),
+            ("settings", "default_printer", "VARCHAR(20) DEFAULT 'A4'"),
+            ("settings", "store_logo", "VARCHAR(200) DEFAULT ''")
         ]
         
-        # Run column updates
         for table, column, dtype in updates:
             print(f"🛠️ Checking '{column}' in '{table}'...")
             try:
@@ -40,12 +38,7 @@ def migrate():
                 else:
                     print(f"❌ Failed to add {column}: {e}")
 
-        # Ensure new tables are created
-        print("🛠️ Creating new tables if missing (Attendance, Payroll, Supplier, Purchase)...")
-        db.create_all()
-        print("✅ Tables initialized.")
-
-        print("\n🚀 DONE! Advanced features are now active. Run 'python app.py'")
+        print("\n🚀 DONE! Try running 'python app.py' now.")
 
 if __name__ == "__main__":
     migrate()

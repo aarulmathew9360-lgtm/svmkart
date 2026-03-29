@@ -9,7 +9,10 @@ class User(db.Model, UserMixin):
     username = db.Column(db.String(50), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
     role = db.Column(db.String(20), default='staff') # 'admin' or 'staff'
+    phone = db.Column(db.String(20), default='') # Used for Whatsapp report
+    profile_image = db.Column(db.String(255), default='default.png')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    invoices = db.relationship('Invoice', backref='user', lazy=True, foreign_keys='Invoice.user_id')
 
 class Product(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -21,6 +24,7 @@ class Product(db.Model):
     stock = db.Column(db.Integer, default=0)
     unit = db.Column(db.String(20), default='pcs') # kg, pcs, box etc.
     min_stock = db.Column(db.Integer, default=5) # for alerts
+    barcode = db.Column(db.String(50), unique=True, index=True) # EAN-13, UPC etc.
 
 class Customer(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -28,6 +32,7 @@ class Customer(db.Model):
     phone = db.Column(db.String(15))
     email = db.Column(db.String(100))
     address = db.Column(db.Text)
+    points = db.Column(db.Integer, default=0)
     invoices = db.relationship('Invoice', backref='customer', lazy=True, foreign_keys='Invoice.customer_id')
 
 class Invoice(db.Model):
@@ -69,6 +74,10 @@ class Settings(db.Model):
     invoice_prefix = db.Column(db.String(10), default='SVM')
     terms_conditions = db.Column(db.Text, default='1. Goods once sold cannot be returned.\n2. Warranty as per manufacturer terms.')
     footer_note = db.Column(db.String(200), default='Thank you for shopping with SVMKART!')
+    default_printer = db.Column(db.String(20), default='A4') # A4 or Thermal
+    store_logo = db.Column(db.String(200), default='') # Path or URL to logo
+    loyalty_point_value = db.Column(db.Float, default=1.0) # 1 point = 1 rupee
+    loyalty_ratio = db.Column(db.Integer, default=100) # 100 Rs = 1 point
 
 class Expense(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -87,3 +96,52 @@ class StockLog(db.Model):
     
     product = db.relationship('Product', backref=db.backref('logs', lazy=True))
     user = db.relationship('User', backref=db.backref('stock_logs', lazy=True))
+
+class Supplier(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    contact = db.Column(db.String(20))
+    email = db.Column(db.String(100))
+    address = db.Column(db.Text)
+    gstin = db.Column(db.String(20))
+    purchases = db.relationship('Purchase', backref='supplier', lazy=True)
+
+class Purchase(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    purchase_no = db.Column(db.String(20), unique=True, nullable=False)
+    supplier_id = db.Column(db.Integer, db.ForeignKey('supplier.id'))
+    date = db.Column(db.DateTime, default=datetime.utcnow)
+    total_amount = db.Column(db.Float, default=0.0)
+    status = db.Column(db.String(20), default='paid') # paid, pending
+    items = db.relationship('PurchaseItem', backref='purchase', lazy=True, cascade="all, delete-orphan")
+
+class PurchaseItem(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    purchase_id = db.Column(db.Integer, db.ForeignKey('purchase.id'), nullable=False)
+    product_id = db.Column(db.Integer, db.ForeignKey('product.id'), nullable=False)
+    quantity = db.Column(db.Integer, nullable=False)
+    buy_price = db.Column(db.Float, nullable=False)
+    subtotal = db.Column(db.Float, nullable=False)
+    product = db.relationship('Product')
+
+class Attendance(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    date = db.Column(db.Date, default=datetime.utcnow().date())
+    check_in = db.Column(db.DateTime)
+    check_out = db.Column(db.DateTime)
+    status = db.Column(db.String(20), default='present') # present, leave, half-day
+    user = db.relationship('User', backref='attendances')
+
+class Payroll(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    month = db.Column(db.Integer, nullable=False)
+    year = db.Column(db.Integer, nullable=False)
+    base_salary = db.Column(db.Float, default=0.0)
+    bonus = db.Column(db.Float, default=0.0)
+    deductions = db.Column(db.Float, default=0.0)
+    final_pay = db.Column(db.Float, default=0.0)
+    is_paid = db.Column(db.Boolean, default=False)
+    payment_date = db.Column(db.DateTime)
+    user = db.relationship('User', backref='payrolls')

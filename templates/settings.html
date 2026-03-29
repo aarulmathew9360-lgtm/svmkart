@@ -90,20 +90,34 @@
             </div>
         </div>
 
-        <!-- Section 3: Digital Payments -->
+        <!-- Section 3: Branding & Hardware -->
         <div class="card" style="margin-bottom: 2rem;">
             <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 1rem;">
-                <i data-lucide="qr-code" style="color: var(--primary); width: 20px;"></i>
-                <h3 style="font-size: 1.125rem;">Digital Payments (UPI)</h3>
+                <i data-lucide="printer" style="color: var(--accent); width: 20px;"></i>
+                <h3 style="font-size: 1.125rem;">Branding & Hardware</h3>
             </div>
             
+            <div class="grid grid-2">
+                <div class="form-group">
+                    <label>Store Logo URL (Cloud URL or Local Path)</label>
+                    <input type="text" name="store_logo" value="{{ settings.store_logo }}" placeholder="https://imgur.com/logo.png">
+                </div>
+                <div class="form-group">
+                    <label>Default Printer Type</label>
+                    <select name="default_printer">
+                        <option value="A4" {% if settings.default_printer == 'A4' %}selected{% endif %}>A4 Laser Printer</option>
+                        <option value="Thermal" {% if settings.default_printer == 'Thermal' %}selected{% endif %}>Thermal Receipt Printer (80mm)</option>
+                    </select>
+                </div>
+            </div>
+
             <div class="form-group">
                 <label>Your UPI ID (VPA) for QR Generation</label>
                 <div style="position: relative;">
                     <i data-lucide="at-sign" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); width: 18px;"></i>
-                    <input type="text" name="upi_id" value="{{ settings.upi_id }}" style="padding-left: 3rem;" placeholder="e.g. yourname@ybl or 9876543210@upi">
+                    <input type="text" name="upi_id" value="{{ settings.upi_id }}" style="padding-left: 3rem;" placeholder="e.g. yourname@ybl">
                 </div>
-                <p style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.5rem;">The system will automatically generate a dynamic payment QR on the bill when 'UPI' is selected as the payment method.</p>
+                <p style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.5rem;">The system will automatically generate a dynamic payment QR on the bill when 'UPI' is selected.</p>
             </div>
         </div>
 
@@ -119,28 +133,112 @@
         </div>
     </form>
 
-    <!-- Section 3: System Operations (Dangerous) -->
-    <div class="card" style="margin-top: 1rem; border-color: rgba(239, 68, 68, 0.2);">
-        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
-            <i data-lucide="shield-alert" style="color: var(--danger); width: 20px;"></i>
-            <h3 style="font-size: 1.125rem; color: var(--danger);">System Utilities</h3>
+    <!-- Section 4: Staff Management (Admins Only) -->
+    <div class="card" style="margin-top: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 1rem;">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <i data-lucide="users" style="color: var(--primary); width: 20px;"></i>
+                <h3 style="font-size: 1.125rem;">Staff Management</h3>
+            </div>
+            <button class="btn btn-primary btn-sm" onclick="document.getElementById('add-staff-modal').style.display='flex'">
+                <i data-lucide="user-plus"></i> New Staff
+            </button>
         </div>
-        <p style="color: var(--text-muted); margin-bottom: 1.5rem; font-size: 0.875rem;">Manage database backups and system integrity.</p>
-        
-        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-            <button class="btn btn-outline" style="flex: 1; border-color: var(--success); color: var(--success);">
-                <i data-lucide="download-cloud"></i>
-                <span>Export Product List</span>
-            </button>
-            <button class="btn btn-outline" style="flex: 1; border-color: var(--accent); color: var(--accent);">
-                <i data-lucide="database"></i>
-                <span>Database Backup (.sql)</span>
-            </button>
-            <button class="btn btn-outline" style="flex: 1; border-color: var(--danger); color: var(--danger);" onclick="alert('Contact administrator for this action.')">
-                <i data-lucide="trash-2"></i>
-                <span>Reset Factory Settings</span>
-            </button>
+
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Role</th>
+                        <th>Joined Date</th>
+                        <th style="text-align: right;">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr>
+                        <td style="font-weight: 600;">{{ user.username }}</td>
+                        <td><span class="badge {% if user.role == 'admin' %}badge-success{% else %}badge-warning{% endif %}">{{ user.role.upper() }}</span></td>
+                        <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
+                        <td style="text-align: right;">
+                            {% if user.username != 'admin' and user.id != current_user.id %}
+                            <a href="{{ url_for('delete_staff', user_id=user.id) }}" style="color: var(--danger);" onclick="return confirm('Remove access for this user?')">
+                                <i data-lucide="trash-2" style="width: 18px;"></i>
+                            </a>
+                            {% else %}
+                            <span style="color: var(--text-muted); font-size: 0.75rem;">Protected</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
+
+    <!-- Section 5: System Operations -->
+    <div class="card" style="margin-top: 2rem; border-color: rgba(239, 68, 68, 0.2);">
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
+            <i data-lucide="shield-alert" style="color: var(--danger); width: 20px;"></i>
+            <h3 style="font-size: 1.125rem; color: var(--danger);">Advanced Utilities</h3>
+        </div>
+        
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+            <a href="{{ url_for('export_products') }}" class="btn btn-outline" style="flex: 1; border-color: var(--success); color: var(--success); text-decoration: none; justify-content: center;">
+                <i data-lucide="download-cloud"></i>
+                <span>Product Export</span>
+            </a>
+            <a href="{{ url_for('backup_database') }}" class="btn btn-outline" style="flex: 1; border-color: var(--accent); color: var(--accent); text-decoration: none; justify-content: center;">
+                <i data-lucide="database"></i>
+                <span>Full SQL Backup</span>
+            </a>
+            <button type="button" class="btn btn-outline" style="flex: 1; border-color: var(--danger); color: var(--danger); justify-content: center;" onclick="confirmReset()">
+                <i data-lucide="alert-octagon"></i>
+                <span>Hard Factory Reset</span>
+            </button>
+        </div>
+        <form id="reset-form" action="{{ url_for('reset_factory') }}" method="POST" style="display: none;"></form>
+    </div>
 </div>
+
+<!-- Add Staff Modal -->
+<div id="add-staff-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); z-index: 1001; align-items: center; justify-content: center; padding: 2rem;">
+    <div class="card animate-fade" style="width: 100%; max-width: 400px; padding: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+            <h2 style="font-size: 1.25rem;">Add New Staff Member</h2>
+            <i data-lucide="x" style="cursor: pointer; color: var(--text-muted);" onclick="document.getElementById('add-staff-modal').style.display='none'"></i>
+        </div>
+        <form action="{{ url_for('add_staff') }}" method="POST">
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" name="username" required autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label>Initial Password</label>
+                <input type="password" name="password" required>
+            </div>
+            <div class="form-group">
+                <label>System Role</label>
+                <select name="role">
+                    <option value="staff">Staff (Billing only)</option>
+                    <option value="admin">Admin (All Access)</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 1rem;">
+                <i data-lucide="check"></i> <span>Create Account</span>
+            </button>
+        </form>
+    </div>
+</div>
+
+<script>
+function confirmReset() {
+    if (confirm("🚨 WARNING: This will delete ALL products, customers, invoices, and logs. Only the admin account will remain. This action CANNOT be undone. Are you absolutely sure?")) {
+        if (confirm("Final Confirmation: Type 'CONFIRM' below to proceed if you really want to clear the entire system.")) {
+            document.getElementById('reset-form').submit();
+        }
+    }
+}
+</script>
 {% endblock %}

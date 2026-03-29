@@ -8,15 +8,28 @@
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
             <div style="display: flex; align-items: center; gap: 1rem;">
                 <h2>Invoice Items</h2>
-                <div onclick="document.getElementById('barcode-modal').style.display='flex'; document.getElementById('manual-barcode').focus();" style="display: flex; align-items: center; gap: 0.5rem; background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.75rem; border: 1px solid var(--success); cursor: pointer; transition: all 0.3s ease;">
-                    <i data-lucide="scan-line" style="width: 14px; animation: pulse-red 2s infinite;"></i>
-                    <span>Scanner Ready / Click to type</span>
-                </div>
             </div>
-            <button class="btn btn-outline" id="add-item-btn">
+            <button class="btn btn-outline" id="add-item-btn" title="Alt+A">
                 <i data-lucide="plus"></i>
                 <span>Add Custom Item</span>
+                <kbd style="font-size: 0.65rem; padding: 0.1rem 0.4rem; background: rgba(255,255,255,0.1); border-radius: 4px; margin-left: 0.25rem;">Alt+A</kbd>
             </button>
+        </div>
+
+        <!-- ULTRA UX: Global Barcode Scanner Search Bar -->
+        <div style="margin-bottom: 2rem;">
+            <div style="position: relative;">
+                <i data-lucide="barcode" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--primary); width: 24px; height: 24px;"></i>
+                <input type="text" id="global-barcode-input" placeholder="Scan Barcode or Type Product Name (Press Enter)" style="width: 100%; padding: 1.25rem 200px 1.25rem 3.5rem; font-size: 1.1rem; border-radius: 12px; border: 2px solid var(--primary); background: var(--bg-card); color: var(--text-base); box-shadow: 0 4px 20px rgba(0,0,0,0.1); transition: all 0.3s ease;" autocomplete="off" autofocus>
+                <div style="position: absolute; right: 0.5rem; top: 50%; transform: translateY(-50%); display: flex; align-items: center; gap: 0.5rem;">
+                    <div style="background: rgba(16, 185, 129, 0.1); color: var(--success); padding: 0.4rem 0.8rem; border-radius: 1rem; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; gap: 0.5rem; border: 1px solid rgba(16, 185, 129, 0.3);">
+                        <i data-lucide="scan-line" style="width: 16px; animation: pulse-red 2s infinite;"></i> Scanner Ready
+                    </div>
+                    <button onclick="startWebcamScanner()" class="btn" style="background: var(--primary); color: white; padding: 0.4rem 0.8rem; border-radius: 1rem; font-size: 0.85rem; border: none; cursor: pointer; display: flex; align-items: center; gap: 0.4rem;">
+                        <i data-lucide="camera" style="width: 16px;"></i> Webcam
+                    </button>
+                </div>
+            </div>
         </div>
 
         <div id="items-container">
@@ -44,18 +57,29 @@
         
         <div class="form-group">
             <label>Select Customer</label>
-            <select id="customer-select">
-                <option value="">Walk-in Customer</option>
+            <select id="customer-select" onchange="updateCustomerPoints()">
+                <option value="" data-points="0" data-phone="">Walk-in Customer</option>
                 {% for customer in customers %}
-                <option value="{{ customer.id }}">{{ customer.name }} ({{ customer.phone }})</option>
+                <option value="{{ customer.id }}" data-points="{{ customer.points }}" data-phone="{{ customer.phone }}">{{ customer.name }} ({{ customer.phone }})</option>
                 {% endfor %}
             </select>
+            <div id="points-display" style="display: none; margin-top: 0.5rem; font-size: 0.75rem; color: var(--success); font-weight: 600;">
+                <i data-lucide="star" style="width: 12px; vertical-align: middle;"></i>
+                Available Points: <span id="available-points">0</span> (Value: ₹<span id="points-value">0</span>)
+            </div>
         </div>
 
         <div style="margin-top: 2rem; border-top: 1px solid var(--border-glass); padding-top: 1rem;">
             <div style="display: flex; justify-content: space-between; margin-bottom: 0.75rem;">
                 <span color="var(--text-muted)">Subtotal</span>
                 <span id="subtotal">₹0.00</span>
+            </div>
+            <div id="loyalty-redeem-row" style="display: none; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; background: rgba(16, 185, 129, 0.05); padding: 0.5rem; border-radius: 0.5rem; border: 1px dashed var(--success);">
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" id="redeem-points-check" onchange="updateTotals()" style="width: 20px; height: 20px; cursor: pointer;">
+                    <label for="redeem-points-check" style="margin-bottom: 0; cursor: pointer; color: var(--success); font-weight: 600;">Redeem Points</label>
+                </div>
+                <span id="points-money-value" style="color: var(--success); font-weight: 700;">-₹0.00</span>
             </div>
             <div class="form-group" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
                 <label style="margin-bottom: 0;">Discount (₹)</label>
@@ -108,41 +132,37 @@
                 <i data-lucide="printer"></i>
                 <span>Download Thermal Receipt (80mm)</span>
             </a>
+            <a id="whatsapp-link" href="#" target="_blank" class="btn btn-outline" style="justify-content: center; grid-column: span 2; border-color: #25D366; color: #25D366; display: none;">
+                <i data-lucide="message-square"></i>
+                <span>Share to WhatsApp</span>
+            </a>
             <button class="btn btn-outline" onclick="window.location.reload()" style="justify-content: center; grid-column: span 2;">Create Another Bill</button>
             <a href="{{ url_for('dashboard') }}" class="btn btn-outline" style="justify-content: center; grid-column: span 2;">Back to Dashboard</a>
         </div>
     </div>
 </div>
 
-<!-- Modal for Manual Barcode/Search -->
-<div id="barcode-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); z-index: 1001; align-items: center; justify-content: center; padding: 2rem;">
-    <div class="card animate-fade" style="width: 100%; max-width: 400px; padding: 2rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-            <h2 style="font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem;">
-                <i data-lucide="scan-face" style="color: var(--primary);"></i> 
-                Scan / Type Item
-            </h2>
-            <i data-lucide="x" style="cursor: pointer; color: var(--text-muted);" onclick="document.getElementById('barcode-modal').style.display='none'"></i>
+<!-- Webcam Scanner Modal -->
+<div id="webcam-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(8px); z-index: 1005; flex-direction: column; align-items: center; justify-content: center; padding: 2rem;">
+    <div style="width: 100%; max-width: 500px; background: var(--bg-card); border: 1px solid var(--border-glass); padding: 1.5rem; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); transition: box-shadow 0.3s ease;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+            <h3 style="display: flex; align-items: center; gap: 0.5rem; color: var(--primary); font-size: 1.25rem; margin: 0;"><i data-lucide="camera"></i> Camera Scanner</h3>
+            <i data-lucide="x" style="cursor: pointer; color: var(--text-muted);" onclick="stopWebcamScanner()"></i>
         </div>
-        <p style="color: var(--text-muted); font-size: 0.875rem; margin-bottom: 1.5rem;">Type a product name or scan its barcode.</p>
-        <div class="form-group">
-            <input type="text" id="manual-barcode" placeholder="Enter code or name and press Enter..." style="font-size: 1rem; padding: 1rem;" autocomplete="off">
-        </div>
-        <button class="btn btn-primary" onclick="processManualBarcode()" style="width: 100%; justify-content: center;">
-            <i data-lucide="search"></i>
-            <span>Find & Add</span>
-        </button>
+        <div id="webcam-reader" style="width: 100%; border-radius: 8px; overflow: hidden; background: #000; min-height: 250px;"></div>
+        <p style="text-align: center; color: var(--text-muted); font-size: 0.85rem; margin-top: 1.5rem;">Point your camera at a product barcode. It will beep and add automatically.</p>
+        <button class="btn btn-outline" style="width: 100%; justify-content: center; margin-top: 1rem; border-color: var(--danger); color: var(--danger);" onclick="stopWebcamScanner()">Close Camera</button>
     </div>
 </div>
+
+    <div id="products-data" style="display: none;" data-products='[{% for p in products %}{"id": {{ p.id }}, "name": "{{ p.name }}", "price": {{ p.price }}, "stock": {{ p.stock }}, "barcode": "{{ p.barcode or "" }}"}{% if not loop.last %},{% endif %}{% endfor %}]'></div>
+
 {% endblock %}
 
 {% block scripts %}
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 <script>
-    const products = [
-        {% for p in products %}
-        {id: {{ p.id }}, name: "{{ p.name }}", price: {{ p.price }}, stock: {{ p.stock }}},
-        {% endfor %}
-    ];
+    const products = JSON.parse(document.getElementById('products-data').dataset.products);
 
     const container = document.getElementById('items-container');
     const addItemBtn = document.getElementById('add-item-btn');
@@ -210,10 +230,19 @@
             row.querySelector('.row-total').innerText = '₹' + total.toFixed(2);
         });
 
-        const discount = parseFloat(document.getElementById('discount-input').value) || 0;
+        const manualDiscount = parseFloat(document.getElementById('discount-input').value) || 0;
+        let discount = manualDiscount;
+        
+        // Handle Points Redemption
+        const redeemCheck = document.getElementById('redeem-points-check');
+        if (redeemCheck && redeemCheck.checked) {
+            const pointsValue = parseFloat(document.getElementById('points-value').innerText) || 0;
+            discount += pointsValue;
+        }
+
         const taxRate = parseFloat(document.getElementById('tax-input').value) || 0;
         
-        const discountedTotal = subtotal - discount;
+        const discountedTotal = Math.max(0, subtotal - discount);
         const taxAmount = discountedTotal * (taxRate / 100);
         const grandTotal = discountedTotal + taxAmount;
 
@@ -253,7 +282,8 @@
             items: items,
             discount: parseFloat(document.getElementById('discount-input').value) || 0,
             tax_rate: parseFloat(document.getElementById('tax-input').value) || 0,
-            payment_method: document.getElementById('payment-method').value
+            payment_method: document.getElementById('payment-method').value,
+            redeem_points: document.getElementById('redeem-points-check').checked
         };
 
         try {
@@ -266,22 +296,37 @@
                 body: JSON.stringify(data)
             });
             
+            if (!response.ok) {
+                const errorData = await response.text();
+                throw new Error(`Server returned status ${response.status}: ${errorData.substring(0, 100)}...`);
+            }
+            
             const result = await response.json();
             
             if (result.success) {
                 document.getElementById('download-link').href = '/invoice/pdf/' + result.invoice_id;
                 document.getElementById('thermal-link').href = '/invoice/thermal/' + result.invoice_id;
                 document.getElementById('success-modal').style.display = 'flex';
+                
+                // WhatsApp Integration
+                if (result.customer_phone) {
+                    const message = encodeURIComponent(`Hi! Thank you for shopping with ${result.store_name}. Your Invoice No: ${result.invoice_no} for ₹${result.final_amount.toFixed(2)} is generated. Thank you!`);
+                    document.getElementById('whatsapp-link').href = `https://wa.me/${result.customer_phone}?text=${message}`;
+                    document.getElementById('whatsapp-link').style.display = 'flex';
+                } else {
+                    document.getElementById('whatsapp-link').style.display = 'none';
+                }
                 lucide.createIcons();
             } else {
-                alert('Error: ' + result.message);
+                alert('Warning: ' + result.message);
                 saveBtn.disabled = false;
                 saveBtn.innerText = 'Complete & Save';
             }
         } catch (error) {
-            console.error('Error saving invoice:', error);
-            alert('Something went wrong.');
+            console.error('CRITICAL Error saving invoice:', error);
+            alert('SYSTEM ERROR: ' + error.message + '\n\nPlease check if your internet is working or tell the developer about this message.');
             saveBtn.disabled = false;
+            saveBtn.innerText = 'Complete & Save';
         }
     };
 
@@ -317,26 +362,74 @@
         }, 50); // 50ms timeout threshold for scanners
     });
 
-    // Handle manual entry modal
-    document.getElementById('manual-barcode').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            processManualBarcode();
+    // Billing-page keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        if (e.altKey) {
+            if (e.key === 'a' || e.key === 'A') {
+                e.preventDefault();
+                createItemRow(); // Alt+A → Add Custom Item
+                // Flash the button for feedback
+                addItemBtn.style.transform = 'scale(0.95)';
+                setTimeout(() => addItemBtn.style.transform = '', 150);
+            }
+            if (e.key === 's' || e.key === 'S') {
+                e.preventDefault();
+                saveBtn.click(); // Alt+S → Save Invoice
+            }
         }
     });
 
-    function processManualBarcode() {
-        const input = document.getElementById('manual-barcode');
-        const code = input.value.trim();
-        if (code) {
-            processBarcode(code);
-            input.value = ''; // clear for next scan
-            document.getElementById('barcode-modal').style.display = 'none'; // Auto close
+    // Handle global barcode input
+    const globalBarcode = document.getElementById('global-barcode-input');
+    globalBarcode.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const code = this.value.trim();
+            if (code) {
+                processBarcode(code);
+                this.value = ''; // clear for next scan
+            }
         }
+    });
+
+    // Smart Auto-focus: Keep scanner ready if clicking on empty space
+    document.addEventListener('click', function(e) {
+        if (e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT' && e.target.tagName !== 'BUTTON' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'I') {
+            globalBarcode.focus();
+        }
+    });
+
+
+    function updateCustomerPoints() {
+        const select = document.getElementById('customer-select');
+        const option = select.options[select.selectedIndex];
+        const points = parseInt(option.dataset.points) || 0;
+        const display = document.getElementById('points-display');
+        const redeemRow = document.getElementById('loyalty-redeem-row');
+        
+        if (points > 0) {
+            display.style.display = 'block';
+            document.getElementById('available-points').innerText = points;
+            // Assuming 1 point = 1 rupee (get from settings if needed, but for POC hardcode)
+            const pointValue = points * 1.0; 
+            document.getElementById('points-value').innerText = pointValue.toFixed(2);
+            document.getElementById('points-money-value').innerText = '-₹' + pointValue.toFixed(2);
+            redeemRow.style.display = 'flex';
+        } else {
+            display.style.display = 'none';
+            redeemRow.style.display = 'none';
+            document.getElementById('redeem-points-check').checked = false;
+        }
+        updateTotals();
     }
 
     function processBarcode(barcode) {
-        // Match barcode (for now we assume barcode = product.id or name)
-        const matchedProduct = products.find(p => p.id == barcode || p.name.toLowerCase().includes(barcode.toLowerCase()));
+        const query = barcode.toLowerCase().trim();
+        const matchedProduct = products.find(p => 
+            (p.barcode && p.barcode.toLowerCase().trim() === query) || 
+            p.id == barcode.trim() || 
+            p.name.toLowerCase().includes(query)
+        );
         
         if (matchedProduct) {
             let foundExisting = false;
@@ -368,7 +461,102 @@
             
             // Notification sound (optional beep equivalent)
             console.log('Barcode scanned: ' + matchedProduct.name);
+        } else {
+            console.warn('Unknown barcode scanned: ' + barcode);
+            // Visual error feedback (red flash)
+            document.body.style.boxShadow = "inset 0 0 50px rgba(239, 68, 68, 0.3)";
+            setTimeout(() => { document.body.style.boxShadow = "none"; }, 200);
+            
+            // Non-blocking toast instead of alert that freezes JS
+            const toast = document.createElement('div');
+            toast.style.position = 'fixed';
+            toast.style.bottom = '20px';
+            toast.style.left = '50%';
+            toast.style.transform = 'translateX(-50%)';
+            toast.style.background = 'var(--danger)';
+            toast.style.color = 'white';
+            toast.style.padding = '0.75rem 1.5rem';
+            toast.style.borderRadius = '2rem';
+            toast.style.boxShadow = '0 5px 15px rgba(0,0,0,0.3)';
+            toast.style.zIndex = '9999';
+            toast.style.fontWeight = 'bold';
+            toast.innerText = `Product '${barcode}' not found`;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2500);
         }
+    }
+    // --- ULTRA FEATURE: Web Camera Barcode Scanning ---
+    let html5QrCode = null;
+
+    function startWebcamScanner() {
+        document.getElementById('webcam-modal').style.display = 'flex';
+        
+        if (!html5QrCode) {
+            html5QrCode = new Html5Qrcode("webcam-reader");
+        }
+
+        const config = { 
+            fps: 30, // Increased from 10 to 30 for much faster reading
+            qrbox: { width: 300, height: 150 }, // Wider box for standard 1D barcodes
+            aspectRatio: 1.333334, 
+            disableFlip: false 
+        };
+
+        html5QrCode.start({ facingMode: "environment" }, config, onScanSuccess)
+        .catch((err) => {
+            alert('Camera Error: Could not start camera. Please ensure you have granted camera permissions.');
+            stopWebcamScanner();
+        });
+    }
+
+    let lastScannedCode = "";
+    let lastScanTime = 0;
+
+    function onScanSuccess(decodedText, decodedResult) {
+        const now = Date.now();
+        // Prevent double scanning the exact same barcode within 2 seconds
+        if (decodedText === lastScannedCode && now - lastScanTime < 2000) {
+            return;
+        }
+
+        lastScannedCode = decodedText;
+        lastScanTime = now;
+
+        // Flash green shadow to indicate scan success
+        const modalInner = document.querySelector('#webcam-modal > div');
+        modalInner.style.boxShadow = "0 0 50px var(--success)";
+        setTimeout(() => {
+            modalInner.style.boxShadow = "0 10px 40px rgba(0,0,0,0.5)";
+        }, 300);
+
+        // Sound Feedback (Short beep)
+        try {
+            const context = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = context.createOscillator();
+            const gainNode = context.createGain();
+            osc.connect(gainNode);
+            gainNode.connect(context.destination);
+            osc.type = "sine";
+            osc.frequency.value = 800; // Frequency in Hz
+            gainNode.gain.setValueAtTime(0.1, context.currentTime); // Volume
+            osc.start();
+            osc.stop(context.currentTime + 0.1); // Duration
+        } catch(e) {}
+
+        // Add to bill
+        processBarcode(decodedText);
+    }
+
+    function stopWebcamScanner() {
+        document.getElementById('webcam-modal').style.display = 'none';
+        if (html5QrCode && html5QrCode.isScanning) {
+            html5QrCode.stop().then((ignore) => {
+                // Stopped successfully
+            }).catch((err) => {
+                console.error("Failed to stop scanning.", err);
+            });
+        }
+        document.getElementById('global-barcode-input').focus();
     }
 </script>
 {% endblock %}

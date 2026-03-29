@@ -36,8 +36,17 @@
             <i data-lucide="trending-up"></i>
         </div>
         <div class="stat-info">
-            <h3>Growth</h3>
-            <p>+12.5%</p>
+            <h3>Revenue Growth</h3>
+            <p>{{ "{:+.1f}".format(growth_pct) }}%</p>
+        </div>
+    </div>
+    <div class="card stat-card">
+        <div class="stat-icon" style="background: rgba(236, 72, 153, 0.1); color: #ec4899;">
+            <i data-lucide="bar-chart-3"></i>
+        </div>
+        <div class="stat-info">
+            <h3>Monthly Profit</h3>
+            <p>₹{{ "{:,.2f}".format(monthly_profit) }}</p>
         </div>
     </div>
 </div>
@@ -50,43 +59,37 @@
             <i data-lucide="more-horizontal" style="color: var(--text-muted); cursor: pointer;"></i>
         </div>
         <div class="chart-container">
-            <canvas id="salesChart"></canvas>
+            <canvas id="salesChart" 
+                    data-labels='{{ labels|safe }}' 
+                    data-values='{{ sales_data|safe }}'></canvas>
         </div>
     </div>
-
-    <!-- Recent Invoices -->
+    
+    <!-- Top Selling Products -->
     <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <h2 style="font-size: 1.125rem;">Recent Invoices</h2>
-            <a href="{{ url_for('invoices') }}" class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.75rem;">View All</a>
+            <h2 style="font-size: 1.125rem;">Top Selling Products</h2>
+            <i data-lucide="award" style="color: var(--warning); width: 18px;"></i>
         </div>
         <div class="table-container">
             <table>
                 <thead>
                     <tr>
-                        <th>Invoice No</th>
-                        <th>Customer</th>
-                        <th>Amount</th>
-                        <th>Status</th>
-                        <th>Action</th>
+                        <th>Product</th>
+                        <th>Sold Qty</th>
+                        <th>Trend</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {% for invoice in recent_invoices %}
+                    {% for name, qty in top_selling %}
                     <tr>
-                        <td style="font-weight: 600;">{{ invoice.invoice_no }}</td>
-                        <td>{{ invoice.customer.name if invoice.customer else 'Walk-in' }}</td>
-                        <td>₹{{ "{:,.2f}".format(invoice.final_amount) }}</td>
-                        <td><span class="badge badge-success">{{ invoice.status.upper() }}</span></td>
-                        <td>
-                            <a href="{{ url_for('generate_pdf', invoice_id=invoice.id) }}" style="color: var(--accent);">
-                                <i data-lucide="download" style="width: 16px;"></i>
-                            </a>
-                        </td>
+                        <td style="font-weight: 600;">{{ name }}</td>
+                        <td>{{ qty }} units</td>
+                        <td><div style="width: 100%; height: 6px; background: rgba(0,0,0,0.1); border-radius: 3px;"><div style="width: 70%; height: 100%; background: var(--success); border-radius: 3px;"></div></div></td>
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="5" style="text-align: center; color: var(--text-muted);">No invoices found.</td>
+                        <td colspan="3" style="text-align: center; color: var(--text-muted);">No sales data yet.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -95,46 +98,82 @@
     </div>
 </div>
 
-<!-- Low Stock Alerts -->
-{% if low_stock_items %}
-<div class="card animate-fade" style="margin-top: 2rem; border-left: 4px solid var(--danger);">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-        <div style="display: flex; align-items: center; gap: 0.5rem; color: var(--danger);">
-            <i data-lucide="alert-octagon"></i>
-            <h2 style="font-size: 1.125rem;">Critical Stock Alerts</h2>
+<!-- Low Stock Highlights -->
+<div class="card" style="margin-top: 2rem;">
+    <h2 style="font-size: 1.125rem; margin-bottom: 1rem; color: var(--danger);">Critical Low Stock</h2>
+    <div class="grid grid-4">
+        {% for item in low_stock_items %}
+        <div style="padding: 1rem; background: rgba(239, 68, 68, 0.05); border-radius: 0.75rem; border: 1px solid rgba(239, 68, 68, 0.1);">
+            <div style="font-weight: 600;">{{ item.name }}</div>
+            <div style="font-size: 0.875rem; color: var(--danger);">Only {{ item.stock }} left</div>
         </div>
-        <a href="{{ url_for('products') }}" class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.75rem; border-color: var(--danger); color: var(--danger);">Manage Inventory</a>
-    </div>
-    <div class="table-container">
-        <table>
-            <thead>
-                <tr>
-                    <th>Product</th>
-                    <th>Category</th>
-                    <th>Current Stock</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for item in low_stock_items %}
-                <tr>
-                    <td style="font-weight: 600;">{{ item.name }}</td>
-                    <td>{{ item.category }}</td>
-                    <td style="font-weight: 700; color: {% if item.stock <= 0 %}var(--danger){% else %}var(--warning){% endif %};">{{ item.stock }} {{ item.unit }}</td>
-                    <td>
-                        {% if item.stock <= 0 %}
-                            <span class="badge badge-danger">Out of Stock</span>
-                        {% else %}
-                            <span class="badge badge-warning">Low Stock</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+        {% else %}
+        <p style="color: var(--text-muted);">All items in stock!</p>
+        {% endfor %}
     </div>
 </div>
-{% endif %}
+
+<div class="grid grid-2" style="margin-top: 2rem;">
+    <!-- Loyal Customers -->
+    <div class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h2 style="font-size: 1.125rem;">Loyal Customers</h2>
+            <i data-lucide="users" style="color: var(--primary); width: 18px;"></i>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Customer</th>
+                        <th>Total Spend</th>
+                        <th>Rank</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for name, spend in top_customers %}
+                    <tr>
+                        <td style="font-weight: 600;">{{ name }}</td>
+                        <td>₹{{ "{:,.2f}".format(spend) }}</td>
+                        <td><span class="badge badge-primary">TOP {{ loop.index }}</span></td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="3" style="text-align: center; color: var(--text-muted);">No customer data yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="card">
+        <h2 style="font-size: 1.125rem; margin-bottom: 1.5rem;">System Health</h2>
+        <div style="display: flex; flex-direction: column; gap: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: rgba(0,0,0,0.05); border-radius: 0.5rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <i data-lucide="database" style="color: var(--accent);"></i>
+                    <span>Database Status</span>
+                </div>
+                <span style="color: var(--success); font-weight: 600;">ONLINE</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: rgba(0,0,0,0.05); border-radius: 0.5rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <i data-lucide="server" style="color: var(--accent);"></i>
+                    <span>Storage Usage</span>
+                </div>
+                <span style="font-weight: 600;">12%</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: rgba(0,0,0,0.05); border-radius: 0.5rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <i data-lucide="refresh-cw" style="color: var(--accent);"></i>
+                    <span>Last Sync</span>
+                </div>
+                <span>Just Now</span>
+            </div>
+        </div>
+    </div>
+</div>
 
 {% endblock %}
 
@@ -142,7 +181,10 @@
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    const ctx = document.getElementById('salesChart').getContext('2d');
+    const canvas = document.getElementById('salesChart');
+    const ctx = canvas.getContext('2d');
+    const labels = JSON.parse(canvas.dataset.labels);
+    const values = JSON.parse(canvas.dataset.values);
     
     // Gradient for chart
     const gradient = ctx.createLinearGradient(0, 0, 0, 400);
@@ -152,10 +194,10 @@
     new Chart(ctx, {
         type: 'line',
         data: {
-            labels: JSON.parse('{{ labels|safe }}'),
+            labels: labels,
             datasets: [{
                 label: 'Sales (₹)',
-                data: JSON.parse('{{ sales_data|safe }}'),
+                data: values,
                 borderColor: '#4f46e5',
                 borderWidth: 3,
                 tension: 0.4,
