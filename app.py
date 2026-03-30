@@ -45,6 +45,12 @@ with app.app_context():
     except Exception:
         db.session.rollback()
 
+    try:
+        db.session.execute(db.text('ALTER TABLE customer ADD COLUMN balance FLOAT DEFAULT 0.0'))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
@@ -228,62 +234,68 @@ def delete_user(user_id):
 def dashboard():
     today = datetime.now().date()
     yesterday = today - timedelta(days=1)
+    thirty_days_ago = today - timedelta(days=30)
     
-    # Calculate today's sales
-    today_sales = db.session.query(db.func.sum(Invoice.final_amount)).filter(db.func.date(Invoice.date) == today).scalar() or 0.0
-    today_sales = float(today_sales)
-    # Calculate total invoices
+    # 1. Sales & Growth
+    today_sales = float(db.session.query(db.func.sum(Invoice.final_amount)).filter(db.func.date(Invoice.date) == today).scalar() or 0.0)
     total_invoices = Invoice.query.count()
-    # Find low stock products
-    low_stock = Product.query.filter(Product.stock <= Product.min_stock).all()
     
-    # Calculate revenue growth vs yesterday
-    yesterday_sales = db.session.query(db.func.sum(Invoice.final_amount)).filter(db.func.date(Invoice.date) == yesterday).scalar() or 0.0
-    yesterday_sales = float(yesterday_sales)
+    yesterday_sales = float(db.session.query(db.func.sum(Invoice.final_amount)).filter(db.func.date(Invoice.date) == yesterday).scalar() or 0.0)
     growth_pct = 0.0
     if yesterday_sales > 0:
-        growth_pct = float((today_sales - yesterday_sales) / yesterday_sales) * 100
-    growth_pct = float(growth_pct)
+        growth_pct = ((today_sales - yesterday_sales) / yesterday_sales) * 100
         
-    # Calculate total monthly profit (Sales - Buy Price * Qty)
+    # 2. Monthly Stats
     first_day_of_month = today.replace(day=1)
-    monthly_profit = db.session.query(db.func.sum((InvoiceItem.unit_price - InvoiceItem.buy_price) * InvoiceItem.quantity))\
-        .join(Invoice).filter(db.func.date(Invoice.date) >= first_day_of_month).scalar() or 0.0
-    monthly_profit = float(monthly_profit)
-        
-    # Top 5 Selling Products
-    top_selling = db.session.query(Product.name, db.func.sum(InvoiceItem.quantity).label('total_qty'))\
-        .join(InvoiceItem, Product.id == InvoiceItem.product_id)\
-        .group_by(Product.id, Product.name).order_by(db.desc('total_qty')).limit(5).all()
-        
-    # Top 3 Customers by Spend
-    top_customers = db.session.query(Customer.name, db.func.sum(Invoice.final_amount).label('total_spend'))\
-        .join(Invoice, Customer.id == Invoice.customer_id)\
-        .group_by(Customer.id, Customer.name).order_by(db.desc('total_spend')).limit(3).all()
-        
-    # Get last 7 days of sales for Chart.js
+    monthly_profit = float(db.session.query(db.func.sum((InvoiceItem.unit_price - InvoiceItem.buy_price) * InvoiceItem.quantity))\
+        .join(Invoice).filter(db.func.date(Invoice.date) >= first_day_of_month).scalar() or 0.0)
+    
+    # 3. Inventory Checks
+    low_stock_items = Product.query.filter(Product.stock <= Product.min_stock).all()
+    low_stock_count = len(low_stock_items)
+    
+    # 4. Chart Data (7 Days)
     labels = []
-    data = []
+    sales_data = []
+    profit_data = []
     for i in range(6, -1, -1):
         day = today - timedelta(days=i)
-        labels.append(day.strftime('%a'))
-        sales = db.session.query(db.func.sum(Invoice.final_amount)).filter(db.func.date(Invoice.date) == day).scalar() or 0.0
-        data.append(float(sales))
+        labels.append(day.strftime('%b %d'))
+        s = float(db.session.query(db.func.sum(Invoice.final_amount)).filter(db.func.date(Invoice.date) == day).scalar() or 0.0)
+        p = float(db.session.query(db.func.sum((InvoiceItem.unit_price - InvoiceItem.buy_price) * InvoiceItem.quantity))\
+            .join(Invoice).filter(db.func.date(Invoice.date) == day).scalar() or 0.0)
+        sales_data.append(s)
+        profit_data.append(p)
         
-    recent_invoices = Invoice.query.order_by(Invoice.date.desc()).limit(3).all()
-    
+    # 5. Leaderboards
+    # Staff Leaderboard (Last 30 Days Sales per User)
+    staff_sales = db.session.query(User.username, db.func.sum(Invoice.final_amount))\
+        .join(Invoice).filter(Invoice.date >= thirty_days_ago)\
+        .group_by(User.username).order_by(db.func.sum(Invoice.final_amount).desc()).all()
+        
+    # Top Products
+    top_selling = db.session.query(Product.name, db.func.sum(InvoiceItem.quantity))\
+        .join(InvoiceItem).join(Invoice)\
+        .group_by(Product.name).order_by(db.func.sum(InvoiceItem.quantity).desc()).limit(5).all()
+        
+    # Top Customers
+    top_customers = db.session.query(Customer.name, db.func.sum(Invoice.final_amount))\
+        .join(Invoice).group_by(Customer.name)\
+        .order_by(db.func.sum(Invoice.final_amount).desc()).limit(5).all()
+
     return render_template('dashboard.html', 
                            today_sales=today_sales, 
                            total_invoices=total_invoices, 
-                           low_stock_count=len(low_stock),
-                           low_stock_items=low_stock[:5],
-                           growth_pct=growth_pct,
+                           low_stock_count=low_stock_count, 
+                           low_stock_items=low_stock_items[:5],
+                           growth_pct=growth_pct, 
                            monthly_profit=monthly_profit,
+                           labels=json.dumps(labels),
+                           sales_data=json.dumps(sales_data),
+                           profit_data=json.dumps(profit_data),
                            top_selling=top_selling,
                            top_customers=top_customers,
-                           labels=json.dumps(labels),
-                           sales_data=json.dumps(data),
-                           recent_invoices=recent_invoices)
+                           staff_sales=staff_sales)
 
 # --- Products Management ---
 @app.route('/products')
@@ -564,6 +576,10 @@ def billing():
                         discount += points_to_money
                         customer.points = 0
                     
+                    # Update credit balance if payment is 'Credit'
+                    if payment_method == 'Credit':
+                        customer.balance = (customer.balance or 0) + final_amount
+                    
                     # Recalculate tax with new discount if points were redeemed
                     tax_amount = (total_amount - discount) * (tax_rate / 100)
                     final_amount = (total_amount - discount) + tax_amount
@@ -590,7 +606,8 @@ def billing():
                 'invoice_no': invoice_no,
                 'customer_phone': wa_format(customer_phone),
                 'final_amount': final_amount,
-                'store_name': store_name
+                'store_name': store_name,
+                'upi_id': settings.upi_id if settings else ""
             })
         
         except Exception as e:
@@ -603,7 +620,35 @@ def billing():
     all_products = Product.query.all()
     all_customers = Customer.query.all()
     settings = Settings.query.first()
-    return render_template('billing.html', products=all_products, customers=all_customers, default_tax=settings.default_tax_rate)
+    return render_template('billing.html', products=all_products, customers=all_customers, default_tax=settings.default_tax_rate, settings=settings)
+
+# --- Credit Book / Kadaa Management ---
+@app.route('/credit-book')
+@login_required
+def credit_book():
+    # Only customers with balance > 0
+    debtors = Customer.query.filter(Customer.balance > 0).order_by(Customer.balance.desc()).all()
+    total_outstanding = db.session.query(db.func.sum(Customer.balance)).scalar() or 0.0
+    return render_template('credit_book.html', debtors=debtors, total_outstanding=total_outstanding)
+
+@app.route('/customer/payment', methods=['POST'])
+@login_required
+def record_customer_payment():
+    customer_id = request.form.get('customer_id')
+    amount = float(request.form.get('amount', 0))
+    payment_method = request.form.get('payment_method', 'Cash')
+    
+    customer = db.session.get(Customer, customer_id)
+    if customer:
+        customer.balance -= amount
+        if customer.balance < 0:
+            customer.balance = 0
+            
+        # Create a dummy invoice for payment entry if needed, but for now just update balance
+        db.session.commit()
+        flash(f'Payment of ₹{amount} recorded for {customer.name}!', 'success')
+        
+    return redirect(url_for('credit_book'))
 
 # --- Invoices Management ---
 @app.route('/invoices')
@@ -1206,7 +1251,9 @@ def inward():
         supplier_id = data.get('supplier_id')
         items = data.get('items') # List of {product_id, quantity, buy_price}
         
-        purchase_no = f"PUR-{datetime.now().strftime('%Y%m%d')}-{Purchase.query.count() + 1:04d}"
+        # Generate unique Purchase No safely
+        max_p_id = db.session.query(db.func.max(Purchase.id)).scalar() or 0
+        purchase_no = f"PUR-{datetime.now().strftime('%Y%m%d')}-{max_p_id + 1:04d}"
         
         try:
             new_purchase = Purchase(purchase_no=purchase_no, supplier_id=supplier_id)

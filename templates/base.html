@@ -33,12 +33,14 @@
                     <span>Products <small style="opacity:0.5; font-size: 0.6rem; float: right; margin-top:2px;">Alt+P</small></span>
                 </a>
             </li>
+            {% if current_user.role == 'admin' %}
             <li>
                 <a href="{{ url_for('inventory_logs') }}" class="{% if request.endpoint == 'inventory_logs' %}active{% endif %}">
                     <i data-lucide="clipboard-list"></i>
                     <span>Stock Logs</span>
                 </a>
             </li>
+            {% endif %}
             <li>
                 <a href="{{ url_for('suppliers') }}" class="{% if request.endpoint == 'suppliers' %}active{% endif %}">
                     <i data-lucide="truck"></i>
@@ -58,11 +60,18 @@
                 </a>
             </li>
             <li>
+                <a href="{{ url_for('credit_book') }}" class="{% if request.endpoint == 'credit_book' %}active{% endif %}">
+                    <i data-lucide="book-open"></i>
+                    <span>Credit Book (Kadaa)</span>
+                </a>
+            </li>
+            <li>
                 <a href="{{ url_for('invoices') }}" class="{% if request.endpoint == 'invoices' %}active{% endif %}" title="Invoices [Alt+I]">
                     <i data-lucide="file-text"></i>
                     <span>Invoices <small style="opacity:0.5; font-size: 0.6rem; float: right; margin-top:2px;">Alt+I</small></span>
                 </a>
             </li>
+            {% if current_user.role == 'admin' %}
             <li>
                 <a href="{{ url_for('expenses') }}" class="{% if request.endpoint == 'expenses' %}active{% endif %}">
                     <i data-lucide="wallet"></i>
@@ -75,6 +84,7 @@
                     <span>Reports</span>
                 </a>
             </li>
+            {% endif %}
             <li>
                 <a href="{{ url_for('attendance_page') }}" class="{% if request.endpoint == 'attendance_page' %}active{% endif %}" title="View Attendance">
                     <i data-lucide="clock"></i>

@@ -31,6 +31,7 @@
             <p>{{ low_stock_count }}</p>
         </div>
     </div>
+    {% if current_user.role == 'admin' %}
     <div class="card stat-card">
         <div class="stat-icon" style="background: rgba(14, 165, 233, 0.1); color: var(--accent);">
             <i data-lucide="trending-up"></i>
@@ -49,21 +50,34 @@
             <p>₹{{ "{:,.2f}".format(monthly_profit) }}</p>
         </div>
     </div>
+    {% endif %}
 </div>
 
 <div class="grid grid-2" style="margin-top: 2rem;">
+    {% if current_user.role == 'admin' %}
     <!-- Sales Analytics Chart -->
     <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <h2 style="font-size: 1.125rem;">Sales Analytics (Last 7 Days)</h2>
+            <h2 style="font-size: 1.125rem;">Global Sales Analytics (Last 7 Days)</h2>
             <i data-lucide="more-horizontal" style="color: var(--text-muted); cursor: pointer;"></i>
         </div>
         <div class="chart-container">
             <canvas id="salesChart" 
                     data-labels='{{ labels|safe }}' 
-                    data-values='{{ sales_data|safe }}'></canvas>
+                    data-values='{{ sales_data|safe }}'
+                    data-profit='{{ profit_data|safe }}'></canvas>
         </div>
     </div>
+    {% else %}
+    <!-- Sales Analytics Chart -->
+    <div class="card">
+        <div style="text-align: center; padding: 2rem;">
+            <i data-lucide="shield-alert" style="width: 48px; height: 48px; color: var(--text-muted); margin-bottom: 1rem;"></i>
+            <h2 style="font-size: 1.125rem;">Restricted View</h2>
+            <p style="color: var(--text-muted);">Only administrators can see store financial charts.</p>
+        </div>
+    </div>
+    {% endif %}
     
     <!-- Top Selling Products -->
     <div class="card">
@@ -109,6 +123,33 @@
         </div>
         {% else %}
         <p style="color: var(--text-muted);">All items in stock!</p>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Staff Performance Leaderboard -->
+<div class="card" style="margin-top: 2rem; background: linear-gradient(135deg, var(--bg-card) 0%, rgba(79, 70, 229, 0.05) 100%); border: 1.5px solid rgba(79, 70, 229, 0.2);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+        <h2 style="font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="trophy" style="color: var(--warning);"></i> 30-Day Staff Performance</h2>
+        <span class="badge badge-primary">Team Sales</span>
+    </div>
+    <div class="grid grid-4">
+        {% for name, sales in staff_sales %}
+        <div style="padding: 1.5rem; text-align: center; background: rgba(255, 255, 255, 0.05); border-radius: 1rem; border: 1px solid rgba(255, 255, 255, 0.1); position: relative;">
+            {% if loop.index == 1 %}
+            <div style="position: absolute; top: -10px; right: -10px; width: 30px; height: 30px; background: gold; border-radius: 50%; color: black; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(255, 215, 0, 0.4);">1</div>
+            <i data-lucide="star" style="color: gold; width: 40px; height: 40px; margin-bottom: 0.5rem; fill: gold;"></i>
+            {% else %}
+            <img src="https://api.dicebear.com/7.x/initials/svg?seed={{ name }}&backgroundColor=3b82f6,10b981,f59e0b" alt="Avatar" style="width: 40px; height: 40px; border-radius: 50%; margin-bottom: 0.5rem;">
+            {% endif %}
+            <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-base);">{{ name }}</div>
+            <div style="font-size: 0.9rem; color: var(--primary); font-weight: 600;">₹{{ "{:,.0f}".format(sales) }}</div>
+            <div style="height: 4px; border-radius: 2px; background: rgba(79, 70, 229, 0.2); margin-top: 0.75rem;">
+                <div style="height: 100%; border-radius: 2px; background: var(--primary); width: {{ (sales / (staff_sales[0][1] if staff_sales[0][1] > 0 else 1)) * 100 }}%;"></div>
+            </div>
+        </div>
+        {% else %}
+        <p style="color: var(--text-muted); grid-column: span 4; text-align: center;">No staff sales recorded this month.</p>
         {% endfor %}
     </div>
 </div>
@@ -185,36 +226,55 @@
     const ctx = canvas.getContext('2d');
     const labels = JSON.parse(canvas.dataset.labels);
     const values = JSON.parse(canvas.dataset.values);
+    const profitValues = JSON.parse(canvas.dataset.profit);
     
-    // Gradient for chart
-    const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-    gradient.addColorStop(0, 'rgba(79, 70, 229, 0.3)');
-    gradient.addColorStop(1, 'rgba(79, 70, 229, 0)');
+    // Gradients
+    const salesGradient = ctx.createLinearGradient(0, 0, 0, 400);
+    salesGradient.addColorStop(0, 'rgba(79, 70, 229, 0.2)');
+    salesGradient.addColorStop(1, 'rgba(79, 70, 229, 0)');
+
+    const profitGradient = ctx.createLinearGradient(0, 0, 0, 400);
+    profitGradient.addColorStop(0, 'rgba(16, 185, 129, 0.2)');
+    profitGradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
 
     new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
-            datasets: [{
-                label: 'Sales (₹)',
-                data: values,
-                borderColor: '#4f46e5',
-                borderWidth: 3,
-                tension: 0.4,
-                fill: true,
-                backgroundColor: gradient,
-                pointBackgroundColor: '#4f46e5',
-                pointBorderColor: '#fff',
-                pointBorderWidth: 2,
-                pointRadius: 4,
-                pointHoverRadius: 6
-            }]
+            datasets: [
+                {
+                    label: 'Revenue (₹)',
+                    data: values,
+                    borderColor: '#4f46e5',
+                    borderWidth: 3,
+                    tension: 0.4,
+                    fill: true,
+                    backgroundColor: salesGradient,
+                    pointBackgroundColor: '#4f46e5',
+                    pointRadius: 3
+                },
+                {
+                    label: 'Net Profit (₹)',
+                    data: profitValues,
+                    borderColor: '#10b981',
+                    borderWidth: 3,
+                    tension: 0.4,
+                    fill: true,
+                    backgroundColor: profitGradient,
+                    pointBackgroundColor: '#10b981',
+                    pointRadius: 3
+                }
+            ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { display: false }
+                legend: { 
+                    display: true,
+                    position: 'top',
+                    labels: { color: '#94a3b8', boxWidth: 12 }
+                }
             },
             scales: {
                 y: {

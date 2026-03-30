@@ -33,6 +33,7 @@ class Customer(db.Model):
     email = db.Column(db.String(100))
     address = db.Column(db.Text)
     points = db.Column(db.Integer, default=0)
+    balance = db.Column(db.Float, default=0.0) # Outstanding credit amount
     invoices = db.relationship('Invoice', backref='customer', lazy=True, foreign_keys='Invoice.customer_id')
 
 class Invoice(db.Model):

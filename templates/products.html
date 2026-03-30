@@ -11,6 +11,10 @@
                 <i data-lucide="barcode"></i>
                 <span>Auto-Fill Barcodes</span>
             </button>
+            <button class="btn btn-outline" onclick="window.location.href='{{ url_for('export_products') }}'" title="Backup Inventory">
+                <i data-lucide="download"></i>
+                <span>Export CSV</span>
+            </button>
             <button class="btn btn-outline" onclick="document.getElementById('import-modal').style.display='flex'">
                 <i data-lucide="upload"></i>
                 <span>Import CSV</span>

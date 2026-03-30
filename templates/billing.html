@@ -106,6 +106,7 @@
                 <option value="UPI">UPI / GPay / PhonePe</option>
                 <option value="Card">Credit / Debit Card</option>
                 <option value="COD">Cash on Delivery (COD)</option>
+                <option value="Credit">Credit / Account (கடாவ்)</option>
                 <option value="Pending">Payment Pending</option>
             </select>
         </div>
@@ -139,6 +140,28 @@
             <button class="btn btn-outline" onclick="window.location.reload()" style="justify-content: center; grid-column: span 2;">Create Another Bill</button>
             <a href="{{ url_for('dashboard') }}" class="btn btn-outline" style="justify-content: center; grid-column: span 2;">Back to Dashboard</a>
         </div>
+    </div>
+</div>
+
+<!-- UPI QR Modal -->
+<div id="upi-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.9); backdrop-filter: blur(8px); z-index: 1002; align-items: center; justify-content: center; padding: 2rem;">
+    <div class="card animate-fade" style="width: 100%; max-width: 400px; text-align: center; padding: 2rem; border: 2px solid var(--primary);">
+        <h2 style="color: var(--primary); margin-bottom: 1rem;">Scan to Pay</h2>
+        <div style="background: white; padding: 1.5rem; border-radius: 1rem; display: inline-block; margin-bottom: 1.5rem; box-shadow: 0 10px 20px rgba(0,0,0,0.2);">
+            <img id="upi-qr-img" src="" alt="UPI QR Code" style="width: 200px; height: 200px;">
+        </div>
+        <div style="margin-bottom: 1.5rem;">
+            <p style="font-size: 0.9rem; color: var(--text-muted);">Amount to Pay:</p>
+            <h1 id="upi-qr-amount" style="font-size: 2.5rem; color: var(--text-base);">₹0.00</h1>
+        </div>
+        <div style="background: rgba(var(--primary-rgb), 0.1); padding: 1rem; border-radius: 10px; margin-bottom: 2rem;">
+            <p style="font-size: 0.8rem; margin: 0; color: var(--primary); font-weight: 700;">Merchant: {{ settings.store_name if settings else 'SVMKART' }}</p>
+            <p id="upi-qr-id" style="font-size: 0.75rem; margin: 0; color: var(--text-muted);">{{ settings.upi_id if settings else '' }}</p>
+        </div>
+        <button onclick="showSuccessAfterUPI()" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 1rem;">
+            <i data-lucide="check-check"></i>
+            <span>Payment Received & Print Bill</span>
+        </button>
     </div>
 </div>
 
@@ -304,9 +327,9 @@
             const result = await response.json();
             
             if (result.success) {
+                // Store links for later
                 document.getElementById('download-link').href = '/invoice/pdf/' + result.invoice_id;
                 document.getElementById('thermal-link').href = '/invoice/thermal/' + result.invoice_id;
-                document.getElementById('success-modal').style.display = 'flex';
                 
                 // WhatsApp Integration
                 if (result.customer_phone) {
@@ -315,6 +338,17 @@
                     document.getElementById('whatsapp-link').style.display = 'flex';
                 } else {
                     document.getElementById('whatsapp-link').style.display = 'none';
+                }
+
+                // Check for UPI
+                if (data.payment_method === 'UPI' && result.upi_id) {
+                    const upiUri = `upi://pay?pa=${result.upi_id}&pn=${encodeURIComponent(result.store_name)}&am=${result.final_amount.toFixed(2)}&tn=${result.invoice_no}&cu=INR`;
+                    document.getElementById('upi-qr-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiUri)}`;
+                    document.getElementById('upi-qr-amount').innerText = `₹${result.final_amount.toFixed(2)}`;
+                    document.getElementById('upi-qr-id').innerText = result.upi_id;
+                    document.getElementById('upi-modal').style.display = 'flex';
+                } else {
+                    document.getElementById('success-modal').style.display = 'flex';
                 }
                 lucide.createIcons();
             } else {
@@ -329,6 +363,11 @@
             saveBtn.innerText = 'Complete & Save';
         }
     };
+
+    function showSuccessAfterUPI() {
+        document.getElementById('upi-modal').style.display = 'none';
+        document.getElementById('success-modal').style.display = 'flex';
+    }
 
     // --- ULTRA FEATURE: Barcode Scanner Listener ---
     let barcodeBuffer = '';
