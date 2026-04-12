@@ -25,8 +25,39 @@ login_manager = LoginManager()
 login_manager.login_view = 'login'
 login_manager.init_app(app)
 
-# Dynamic DB Auto-Upgrade
+# Dynamic DB Auto-Upgrade & Initialization
 with app.app_context():
+    try:
+        # Create tables safely if they don't exist
+        db.create_all()
+        
+        # Initialize default admin if no users exist
+        if not User.query.filter_by(username='admin').first():
+            admin_pass = generate_password_hash('admin123')
+            default_admin = User(username='admin', password=admin_pass, role='admin')
+            db.session.add(default_admin)
+            
+            default_settings = Settings(
+                store_name='SVMKART',
+                store_address='123 Main St, City',
+                store_contact='+91 936XXXXXXX',
+                store_email='support@svmcart.com',
+                store_website='www.svmcart.com',
+                gstin='',
+                upi_id='yourname@upi',
+                default_tax_rate=18.0,
+                currency_symbol='₹',
+                invoice_prefix='SVM',
+                terms_conditions='1. Goods once sold cannot be returned.\n2. Warranty as per manufacturer.',
+                footer_note='Thank you for shopping with SVMKART!'
+            )
+            db.session.add(default_settings)
+            db.session.commit()
+            print("Successfully initialized fresh database with default Admin.")
+    except Exception as e:
+        db.session.rollback()
+        print(f"Db Initialization skipped/error: {e}")
+
     try:
         db.session.execute(db.text('ALTER TABLE user ADD COLUMN phone VARCHAR(20) DEFAULT ""'))
         db.session.commit()
