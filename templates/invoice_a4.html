@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A4 Invoice #{{ invoice.invoice_no }}</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+            background: #fff;
+            margin: 0;
+            padding: 2cm;
+            font-size: 14px;
+        }
+        .invoice-box {
+            max-width: 800px;
+            margin: auto;
+            border: 1px solid #eee;
+            padding: 30px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.05);
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #3b82f6;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+        }
+        .store-info h1 {
+            color: #3b82f6;
+            margin: 0 0 5px 0;
+            font-size: 28px;
+        }
+        .store-info p {
+            margin: 2px 0;
+            color: #666;
+        }
+        .invoice-details {
+            text-align: right;
+        }
+        .invoice-details h2 {
+            margin: 0;
+            color: #444;
+            letter-spacing: 1px;
+        }
+        .billing-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f8fafc;
+            color: #333;
+            font-weight: 600;
+        }
+        td.right, th.right {
+            text-align: right;
+        }
+        .totals {
+            margin-top: 30px;
+            float: right;
+            width: 300px;
+        }
+        .total-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+        }
+        .total-row.grand-total {
+            font-size: 18px;
+            font-weight: bold;
+            color: #3b82f6;
+            border-top: 2px solid #ddd;
+            padding-top: 10px;
+            margin-top: 10px;
+        }
+        .footer {
+            clear: both;
+            margin-top: 50px;
+            text-align: center;
+            color: #777;
+            font-size: 12px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+        @media print {
+            body { padding: 0; background: #fff; }
+            .invoice-box { box-shadow: none; border: none; padding: 0; }
+        }
+    </style>
+</head>
+<body onload="window.print()">
+    <div class="invoice-box">
+        <div class="header">
+            <div class="store-info">
+                <h1>{{ settings.store_name if settings else 'SVMKART' }}</h1>
+                <p>{{ settings.store_address if settings else '' }}</p>
+                <p>Phone: {{ settings.store_contact if settings else '' }} | {% if settings and settings.gstin %}GSTIN: {{ settings.gstin }}{% endif %}</p>
+            </div>
+            <div class="invoice-details">
+                <h2>INVOICE</h2>
+                <p><strong>#{{ invoice.invoice_no }}</strong></p>
+                <p>Date: {{ invoice.date.strftime('%d-%b-%Y %I:%M %p') }}</p>
+            </div>
+        </div>
+
+        <div class="billing-row">
+            <div>
+                <strong>Billed To:</strong><br>
+                {% if invoice.customer %}
+                    {{ invoice.customer.name }}<br>
+                    {{ invoice.customer.phone }}<br>
+                    {{ invoice.customer.address or '' }}
+                {% else %}
+                    Walk-in Customer
+                {% endif %}
+            </div>
+            <div style="text-align: right;">
+                <strong>Payment Method:</strong><br>
+                {{ invoice.payment_method }}
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>S.No</th>
+                    <th>Item Description</th>
+                    <th class="right">Qty</th>
+                    <th class="right">Price</th>
+                    <th class="right">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in invoice.items %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ item.product.name }}</td>
+                    <td class="right">{{ item.quantity }}</td>
+                    <td class="right">₹{{ "%.2f"|format(item.unit_price) }}</td>
+                    <td class="right">₹{{ "%.2f"|format(item.subtotal) }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="totals">
+            <div class="total-row">
+                <span>Subtotal</span>
+                <span>₹{{ "%.2f"|format(invoice.total_amount) }}</span>
+            </div>
+            {% if invoice.discount > 0 %}
+            <div class="total-row" style="color: #ef4444;">
+                <span>Discount</span>
+                <span>-₹{{ "%.2f"|format(invoice.discount) }}</span>
+            </div>
+            {% endif %}
+            {% if invoice.tax_amount > 0 %}
+            <div class="total-row">
+                <span>Tax ({{ "%.1f"|format(invoice.tax_rate) }}%)</span>
+                <span>₹{{ "%.2f"|format(invoice.tax_amount) }}</span>
+            </div>
+            {% endif %}
+            <div class="total-row grand-total">
+                <span>Total Amount</span>
+                <span>₹{{ "%.2f"|format(invoice.final_amount) }}</span>
+            </div>
+        </div>
+
+        <div class="footer">
+            <p style="white-space: pre-wrap;">{{ settings.terms_conditions if settings else 'Thank you for your business!' }}</p>
+            <p><strong>{{ settings.footer_note if settings else 'Visit us again.' }}</strong></p>
+        </div>
+    </div>
+</body>
+</html>

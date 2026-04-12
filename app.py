@@ -683,6 +683,26 @@ def billing():
     settings = Settings.query.first()
     return render_template('billing.html', products=all_products, customers=all_customers, default_tax=settings.default_tax_rate, settings=settings)
 
+@app.route('/invoice/pdf/<int:invoice_id>')
+@login_required
+def invoice_pdf(invoice_id):
+    invoice = db.session.get(Invoice, invoice_id)
+    settings = Settings.query.first()
+    if not invoice:
+        flash('Invoice not found', 'danger')
+        return redirect(url_for('billing'))
+    return render_template('invoice_a4.html', invoice=invoice, settings=settings)
+
+@app.route('/invoice/thermal/<int:invoice_id>')
+@login_required
+def invoice_thermal(invoice_id):
+    invoice = db.session.get(Invoice, invoice_id)
+    settings = Settings.query.first()
+    if not invoice:
+        flash('Invoice not found', 'danger')
+        return redirect(url_for('billing'))
+    return render_template('invoice_thermal.html', invoice=invoice, settings=settings)
+
 # --- Credit Book / Kadaa Management ---
 @app.route('/credit-book')
 @login_required
