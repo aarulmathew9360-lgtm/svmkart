@@ -131,12 +131,16 @@
         <p style="color: var(--text-muted); margin-bottom: 2rem;">The transaction has been recorded and stock is updated.</p>
         <div style="display: grid; gap: 1rem; grid-template-columns: 1fr 1fr;">
             <a id="download-link" href="#" class="btn btn-primary" style="justify-content: center; grid-column: span 2;">
-                <i data-lucide="file-text"></i>
-                <span>Download A4 Invoice</span>
+                <i data-lucide="download"></i>
+                <span>Download PDF Invoice</span>
+            </a>
+            <a id="print-view-link" href="#" target="_blank" class="btn btn-outline" style="justify-content: center; grid-column: span 2; border-color: var(--primary); color: var(--primary);">
+                <i data-lucide="eye"></i>
+                <span>Print Preview (A4)</span>
             </a>
             <a id="thermal-link" href="#" class="btn btn-outline" style="justify-content: center; grid-column: span 2; border-color: var(--accent); color: var(--accent);">
                 <i data-lucide="printer"></i>
-                <span>Download Thermal Receipt (80mm)</span>
+                <span>Thermal Receipt (Download)</span>
             </a>
             <a id="whatsapp-link" href="#" target="_blank" class="btn btn-outline" style="justify-content: center; grid-column: span 2; border-color: #25D366; color: #25D366; display: none;">
                 <i data-lucide="message-square"></i>
@@ -340,6 +344,7 @@
             if (result.success) {
                 // Store links for later
                 document.getElementById('download-link').href = '/invoice/pdf/' + result.invoice_id;
+                document.getElementById('print-view-link').href = '/invoice/view/pdf/' + result.invoice_id;
                 document.getElementById('thermal-link').href = '/invoice/thermal/' + result.invoice_id;
                 
                 // WhatsApp Integration

@@ -1,5 +1,10 @@
 import os
+from dotenv import load_dotenv
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file
+
+# Load Environment Variables from .env
+load_dotenv()
+
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -14,11 +19,30 @@ from functools import wraps
 from io import BytesIO
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'svmkart-secret-key-12345'
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'svmkart-secret-key-12345')
+
 # Database Configuration (Environment Aware)
 LOCAL_DB = 'mysql+pymysql://root:Arul936%25@localhost/svmkart'
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', LOCAL_DB)
+DB_URL = os.environ.get('DATABASE_URL', LOCAL_DB)
+
+# Fix for common Aiven/Managed MySQL SSL requirements
+if "aivencloud.com" in DB_URL and "ssl_disabled" not in DB_URL:
+    # Append ssl_disabled=false if not present to ensure PyMySQL uses SSL
+    if "?" in DB_URL:
+        DB_URL += "&ssl_disabled=false"
+    else:
+        DB_URL += "?ssl_disabled=false"
+
+app.config['SQLALCHEMY_DATABASE_URI'] = DB_URL
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+# Technical Connect Args for managed DBs
+if "aivencloud.com" in DB_URL:
+    app.config['SQLALCHEMY_ENGINE_OPTIONS'] = {
+        "connect_args": {"ssl": {"ssl_mode": "REQUIRED"}},
+        "pool_recycle": 280,
+        "pool_pre_ping": True,
+    }
 
 db.init_app(app)
 login_manager = LoginManager()
@@ -683,9 +707,10 @@ def billing():
     settings = Settings.query.first()
     return render_template('billing.html', products=all_products, customers=all_customers, default_tax=settings.default_tax_rate, settings=settings)
 
-@app.route('/invoice/pdf/<int:invoice_id>')
+# --- Invoices Preview (HTML) ---
+@app.route('/invoice/view/pdf/<int:invoice_id>')
 @login_required
-def invoice_pdf(invoice_id):
+def invoice_pdf_view(invoice_id):
     try:
         invoice = db.session.get(Invoice, invoice_id)
         settings = Settings.query.first()
@@ -694,11 +719,11 @@ def invoice_pdf(invoice_id):
         return render_template('invoice_a4.html', invoice=invoice, settings=settings)
     except Exception as e:
         import traceback
-        return f"CRITICAL ERROR IN PDF: {str(e)}<br><pre>{traceback.format_exc()}</pre>", 500
+        return f"CRITICAL ERROR IN PDF VIEW: {str(e)}<br><pre>{traceback.format_exc()}</pre>", 500
 
-@app.route('/invoice/thermal/<int:invoice_id>')
+@app.route('/invoice/view/thermal/<int:invoice_id>')
 @login_required
-def invoice_thermal(invoice_id):
+def invoice_thermal_view(invoice_id):
     try:
         invoice = db.session.get(Invoice, invoice_id)
         settings = Settings.query.first()
@@ -707,7 +732,7 @@ def invoice_thermal(invoice_id):
         return render_template('invoice_thermal.html', invoice=invoice, settings=settings)
     except Exception as e:
         import traceback
-        return f"CRITICAL ERROR IN THERMAL: {str(e)}<br><pre>{traceback.format_exc()}</pre>", 500
+        return f"CRITICAL ERROR IN THERMAL VIEW: {str(e)}<br><pre>{traceback.format_exc()}</pre>", 500
 
 # --- Credit Book / Kadaa Management ---
 @app.route('/credit-book')

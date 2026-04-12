@@ -42,12 +42,20 @@
                         <td><small style="opacity:0.8;">{{ invoice.payment_method }}</small></td>
                         <td><span class="badge badge-success">{{ invoice.status.upper() }}</span></td>
                         <td style="display: flex; gap: 0.5rem;">
-                            <a href="{{ url_for('generate_pdf', invoice_id=invoice.id) }}" class="btn btn-outline" style="padding: 0.4rem; border-radius: 0.4rem; color: var(--primary); border-color: rgba(79, 70, 229, 0.2);" title="A4 Invoice">
-                                <i data-lucide="file-text" style="width: 16px;"></i>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <!-- Download Routes (Binary PDF) -->
+                            <a href="{{ url_for('generate_pdf', invoice_id=invoice.id) }}" class="btn btn-primary" style="padding: 0.4rem; border-radius: 0.4rem;" title="Download A4 PDF">
+                                <i data-lucide="download" style="width: 16px;"></i>
                             </a>
-                            <a href="{{ url_for('download_thermal', invoice_id=invoice.id) }}" class="btn btn-outline" style="padding: 0.4rem; border-radius: 0.4rem; color: var(--accent); border-color: rgba(14, 165, 233, 0.2);" title="Thermal Receipt">
+                            <a href="{{ url_for('download_thermal', invoice_id=invoice.id) }}" class="btn" style="padding: 0.4rem; border-radius: 0.4rem; background: var(--accent); color: white;" title="Download Thermal Receipt">
                                 <i data-lucide="printer" style="width: 16px;"></i>
                             </a>
+                            <div style="width: 1px; background: var(--border-glass); margin: 0 0.25rem;"></div>
+                            <!-- View Routes (HTML Print Preview) -->
+                            <a href="{{ url_for('invoice_pdf_view', invoice_id=invoice.id) }}" target="_blank" class="btn btn-outline" style="padding: 0.4rem; border-radius: 0.4rem;" title="Print Preview (A4)">
+                                <i data-lucide="eye" style="width: 16px;"></i>
+                            </a>
+                        </div>
                         </td>
                     </tr>
                     {% else %}
