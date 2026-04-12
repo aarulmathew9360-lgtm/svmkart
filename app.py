@@ -15,9 +15,9 @@ from io import BytesIO
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'svmkart-secret-key-12345'
-# MySQL URI forroot:Arul936%@localhost/svmkart
-# Percent sign (%) must be encoded as %25 in the connection string
-app.config['SQLALCHEMY_DATABASE_URI'] = 'mysql+mysqlconnector://root:Arul936%25@localhost/svmkart'
+# Database Configuration (Environment Aware)
+LOCAL_DB = 'mysql+mysqlconnector://root:Arul936%25@localhost/svmkart'
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', LOCAL_DB)
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db.init_app(app)
