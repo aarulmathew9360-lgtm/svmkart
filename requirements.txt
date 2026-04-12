@@ -1,7 +1,7 @@
 Flask
 Flask-SQLAlchemy
 Flask-Login
-mysql-connector-python
+PyMySQL
 qrcode
 fpdf
 gunicorn
