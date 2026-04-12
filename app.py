@@ -686,22 +686,28 @@ def billing():
 @app.route('/invoice/pdf/<int:invoice_id>')
 @login_required
 def invoice_pdf(invoice_id):
-    invoice = db.session.get(Invoice, invoice_id)
-    settings = Settings.query.first()
-    if not invoice:
-        flash('Invoice not found', 'danger')
-        return redirect(url_for('billing'))
-    return render_template('invoice_a4.html', invoice=invoice, settings=settings)
+    try:
+        invoice = db.session.get(Invoice, invoice_id)
+        settings = Settings.query.first()
+        if not invoice:
+            return "Invoice not found", 404
+        return render_template('invoice_a4.html', invoice=invoice, settings=settings)
+    except Exception as e:
+        import traceback
+        return f"CRITICAL ERROR IN PDF: {str(e)}<br><pre>{traceback.format_exc()}</pre>", 500
 
 @app.route('/invoice/thermal/<int:invoice_id>')
 @login_required
 def invoice_thermal(invoice_id):
-    invoice = db.session.get(Invoice, invoice_id)
-    settings = Settings.query.first()
-    if not invoice:
-        flash('Invoice not found', 'danger')
-        return redirect(url_for('billing'))
-    return render_template('invoice_thermal.html', invoice=invoice, settings=settings)
+    try:
+        invoice = db.session.get(Invoice, invoice_id)
+        settings = Settings.query.first()
+        if not invoice:
+            return "Invoice not found", 404
+        return render_template('invoice_thermal.html', invoice=invoice, settings=settings)
+    except Exception as e:
+        import traceback
+        return f"CRITICAL ERROR IN THERMAL: {str(e)}<br><pre>{traceback.format_exc()}</pre>", 500
 
 # --- Credit Book / Kadaa Management ---
 @app.route('/credit-book')
