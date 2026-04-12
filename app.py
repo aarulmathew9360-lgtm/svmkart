@@ -1402,6 +1402,11 @@ def inward():
     all_products = Product.query.all()
     return render_template('inward.html', suppliers=all_suppliers, products=all_products)
 
+@app.errorhandler(500)
+def handle_500(e):
+    import traceback
+    return f"<h3>SVMKART SYSTEM CRASH</h3><p>Traceback details:</p><pre>{traceback.format_exc()}</pre>", 500
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port, debug=True)
