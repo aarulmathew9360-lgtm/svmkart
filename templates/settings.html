@@ -1,242 +1,321 @@
 {% extends 'base.html' %}
 
-{% block title %}Full System Upgrade | Settings{% endblock %}
+{% block title %}System Command Center | Settings{% endblock %}
 
 {% block content %}
-<div class="animate-fade" style="max-width: 900px; margin: 0 auto; padding-bottom: 4rem;">
+<div class="animate-fade" style="max-width: 1000px; margin: 0 auto; padding-bottom: 4rem;">
     
-    <div style="margin-bottom: 2rem; display: flex; align-items: center; gap: 1rem;">
-        <div style="background: var(--primary); color: white; width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);">
-            <i data-lucide="cog"></i>
+    <div style="margin-bottom: 2.5rem; display: flex; align-items: center; justify-content: space-between;">
+        <div style="display: flex; align-items: center; gap: 1.25rem;">
+            <div style="background: linear-gradient(135deg, var(--primary), var(--accent)); color: white; width: 56px; height: 56px; border-radius: 16px; display: flex; align-items: center; justify-content: center; box-shadow: 0 8px 16px rgba(79, 70, 229, 0.25);">
+                <i data-lucide="settings-2" style="width: 28px; height: 28px;"></i>
+            </div>
+            <div>
+                <h1 style="font-size: 1.75rem; font-weight: 800; letter-spacing: -0.02em;">System Command Center</h1>
+                <p style="color: var(--text-muted); font-size: 0.95rem;">Master configuration for {{ settings.store_name }}</p>
+            </div>
         </div>
-        <div>
-            <h2 style="font-size: 1.5rem; font-weight: 700;">Full System Settings</h2>
-            <p style="color: var(--text-muted); font-size: 0.875rem;">Configure your business identity and invoicing engine.</p>
+        <div style="display: flex; gap: 0.75rem;">
+            <button class="btn btn-outline" onclick="window.location.reload()">
+                <i data-lucide="refresh-cw"></i>
+                <span data-i18n="reset">Reset View</span>
+            </button>
         </div>
+    </div>
+
+    <!-- Premium Tab Navigation -->
+    <div class="card" style="padding: 0.5rem; margin-bottom: 2rem; display: flex; gap: 0.5rem; background: rgba(255,255,255,0.03); border: 1px solid var(--border-glass);">
+        <button class="tab-btn active" id="btn-general" onclick="showTab('general', this)">
+            <i data-lucide="home"></i> <span>Store Identity</span>
+        </button>
+        <button class="tab-btn" id="btn-billing" onclick="showTab('billing', this)">
+            <i data-lucide="receipt"></i> <span>Invoicing</span>
+        </button>
+        <button class="tab-btn" id="btn-staff" onclick="showTab('staff', this)">
+            <i data-lucide="users"></i> <span>Staff ({{ users|length }})</span>
+        </button>
+        <button class="tab-btn" id="btn-advanced" onclick="showTab('advanced', this)">
+            <i data-lucide="shield-check"></i> <span>Advanced</span>
+        </button>
     </div>
 
     <form action="{{ url_for('settings') }}" method="POST">
-        <!-- Section 1: Store Identity -->
-        <div class="card" style="margin-bottom: 2rem;">
-            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 1rem;">
-                <i data-lucide="home" style="color: var(--primary); width: 20px;"></i>
-                <h3 style="font-size: 1.125rem;">Store Identity</h3>
-            </div>
-            
-            <div class="grid grid-2">
-                <div class="form-group">
-                    <label>Store Name</label>
-                    <input type="text" name="store_name" value="{{ settings.store_name }}" required placeholder="e.g. SVMKART Mega Store">
+        <!-- Tab 1: General Settings -->
+        <div id="tab-general" class="tab-content active animate-fade">
+            <div class="card">
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-glass);">
+                    <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(79, 70, 229, 0.1); color: var(--primary); display: flex; align-items: center; justify-content: center;">
+                        <i data-lucide="building" style="width: 18px;"></i>
+                    </div>
+                    <h3 style="font-size: 1.125rem; font-weight: 700;">Business Identity</h3>
                 </div>
-                <div class="form-group">
-                    <label>Business GSTIN (Tax ID)</label>
-                    <input type="text" name="gstin" value="{{ settings.gstin }}" placeholder="e.g. 33AAAAA0000A1Z5">
+                
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label>Legal Store Name</label>
+                        <input type="text" name="store_name" value="{{ settings.store_name }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Business GSTIN</label>
+                        <input type="text" name="gstin" value="{{ settings.gstin }}" placeholder="GST Number">
+                    </div>
                 </div>
-            </div>
 
-            <div class="form-group">
-                <label>Physical Address</label>
-                <textarea name="store_address" rows="2" required placeholder="Complete store address...">{{ settings.store_address }}</textarea>
-            </div>
-
-            <div class="grid grid-2">
                 <div class="form-group">
-                    <label>Contact Number</label>
-                    <input type="text" name="store_contact" value="{{ settings.store_contact }}" required>
+                    <label>Physical Address</label>
+                    <textarea name="store_address" rows="3" required>{{ settings.store_address }}</textarea>
                 </div>
-                <div class="form-group">
-                    <label>Business Email</label>
-                    <input type="email" name="store_email" value="{{ settings.store_email }}" required>
-                </div>
-            </div>
 
-            <div class="form-group">
-                <label>Official Website</label>
-                <input type="url" name="store_website" value="{{ settings.store_website }}" placeholder="https://www.yourstore.com">
+                <div class="grid grid-2">
+                    <div class="form-group">
+                        <label>Contact Phone</label>
+                        <input type="text" name="store_contact" value="{{ settings.store_contact }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Public Email</label>
+                        <input type="email" name="store_email" value="{{ settings.store_email }}" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Store Logo URL</label>
+                    <div style="display: flex; gap: 1rem; align-items: center;">
+                        <input type="text" name="store_logo" value="{{ settings.store_logo }}" style="flex: 1;" placeholder="https://link-to-your-logo.png">
+                        {% if settings.store_logo %}
+                        <img src="{{ settings.store_logo }}" style="height: 40px; border-radius: 6px; border: 1px solid var(--border-glass);">
+                        {% endif %}
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- Section 2: Invoicing & Taxes -->
-        <div class="card" style="margin-bottom: 2rem;">
-            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 1rem;">
-                <i data-lucide="receipt" style="color: var(--success); width: 20px;"></i>
-                <h3 style="font-size: 1.125rem;">Invoicing & Taxes</h3>
-            </div>
+        <!-- Tab 2: Invoicing Settings -->
+        <div id="tab-billing" class="tab-content animate-fade">
+            <div class="card">
+                <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-glass);">
+                    <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(16, 185, 129, 0.1); color: var(--success); display: flex; align-items: center; justify-content: center;">
+                        <i data-lucide="file-text" style="width: 18px;"></i>
+                    </div>
+                    <h3 style="font-size: 1.125rem; font-weight: 700;">Billing Engine</h3>
+                </div>
 
-            <div class="grid grid-4" style="margin-bottom: 1.5rem;">
+                <div class="grid grid-3">
+                    <div class="form-group">
+                        <label>Invoice Prefix</label>
+                        <input type="text" name="invoice_prefix" value="{{ settings.invoice_prefix }}" maxlength="5" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Currency</label>
+                        <input type="text" name="currency_symbol" value="{{ settings.currency_symbol }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Default Tax %</label>
+                        <input type="number" step="0.01" name="default_tax_rate" value="{{ settings.default_tax_rate }}" required>
+                    </div>
+                </div>
+
                 <div class="form-group">
-                    <label>Invoice Prefix</label>
-                    <input type="text" name="invoice_prefix" value="{{ settings.invoice_prefix }}" maxlength="5" required>
+                    <label>UPI ID for Payments (QR)</label>
+                    <input type="text" name="upi_id" value="{{ settings.upi_id }}" placeholder="yourname@bank">
                 </div>
+
                 <div class="form-group">
-                    <label>Currency</label>
-                    <input type="text" name="currency_symbol" value="{{ settings.currency_symbol }}" required>
+                    <label>Invoice Footer Note</label>
+                    <input type="text" name="footer_note" value="{{ settings.footer_note }}">
                 </div>
-                <div class="form-group" style="grid-column: span 2;">
-                    <label>Default Tax (GST %)</label>
-                    <input type="number" step="0.01" name="default_tax_rate" value="{{ settings.default_tax_rate }}" required>
+
+                <div class="form-group">
+                    <label>Terms & Conditions</label>
+                    <textarea name="terms_conditions" rows="5">{{ settings.terms_conditions }}</textarea>
                 </div>
-            </div>
-
-            <div class="form-group">
-                <label>Invoice Footer Note (Displayed on Bill)</label>
-                <input type="text" name="footer_note" value="{{ settings.footer_note }}" placeholder="e.g. Visit again!">
-            </div>
-
-            <div class="form-group">
-                <label>Terms & Conditions (Comma separated or steps)</label>
-                <textarea name="terms_conditions" rows="4" placeholder="1. Item once sold...
-2. Warranty details...">{{ settings.terms_conditions }}</textarea>
             </div>
         </div>
 
-        <!-- Section 3: Branding & Hardware -->
-        <div class="card" style="margin-bottom: 2rem;">
-            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 1rem;">
-                <i data-lucide="printer" style="color: var(--accent); width: 20px;"></i>
-                <h3 style="font-size: 1.125rem;">Branding & Hardware</h3>
-            </div>
-            
-            <div class="grid grid-2">
-                <div class="form-group">
-                    <label>Store Logo URL (Cloud URL or Local Path)</label>
-                    <input type="text" name="store_logo" value="{{ settings.store_logo }}" placeholder="https://imgur.com/logo.png">
-                </div>
-                <div class="form-group">
-                    <label>Default Printer Type</label>
-                    <select name="default_printer">
-                        <option value="A4" {% if settings.default_printer == 'A4' %}selected{% endif %}>A4 Laser Printer</option>
-                        <option value="Thermal" {% if settings.default_printer == 'Thermal' %}selected{% endif %}>Thermal Receipt Printer (80mm)</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label>Your UPI ID (VPA) for QR Generation</label>
-                <div style="position: relative;">
-                    <i data-lucide="at-sign" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); width: 18px;"></i>
-                    <input type="text" name="upi_id" value="{{ settings.upi_id }}" style="padding-left: 3rem;" placeholder="e.g. yourname@ybl">
-                </div>
-                <p style="color: var(--text-muted); font-size: 0.75rem; margin-top: 0.5rem;">The system will automatically generate a dynamic payment QR on the bill when 'UPI' is selected.</p>
-            </div>
-        </div>
-
-        <!-- Submit Bar -->
-        <div style="position: sticky; bottom: 2rem; z-index: 10; display: flex; justify-content: flex-end; gap: 1rem;">
-            <div class="card" style="padding: 0.75rem 2rem; display: flex; gap: 1rem; align-items: center; background: rgba(15, 23, 42, 0.9); border: 1px solid var(--primary);">
-                <span style="color: var(--text-muted); font-size: 0.875rem;">Ensure all fields are correct before saving.</span>
-                <button type="submit" class="btn btn-primary" style="padding: 0.75rem 2rem;">
-                    <i data-lucide="save"></i>
-                    <span>Apply Settings Upgrade</span>
-                </button>
-            </div>
+        <!-- Float Save Button -->
+        <div style="position: fixed; bottom: 2rem; right: 2rem; z-index: 1000;" id="save-bar">
+            <button type="submit" class="btn btn-primary btn-lg" style="box-shadow: 0 10px 25px rgba(79, 70, 229, 0.4); padding: 1rem 2rem; border-radius: 2rem; display: flex; align-items: center; gap: 1rem;">
+                <i data-lucide="save"></i>
+                <span style="font-weight: 800;">SAVE CONFIGURATION</span>
+            </button>
         </div>
     </form>
 
-    <!-- Section 4: Staff Management (Admins Only) -->
-    <div class="card" style="margin-top: 2rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 1rem;">
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-                <i data-lucide="users" style="color: var(--primary); width: 20px;"></i>
-                <h3 style="font-size: 1.125rem;">Staff Management</h3>
+    <!-- Tab 3: Staff Management -->
+    <div id="tab-staff" class="tab-content animate-fade">
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-glass);">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(14, 165, 233, 0.1); color: var(--accent); display: flex; align-items: center; justify-content: center;">
+                        <i data-lucide="users-2" style="width: 18px;"></i>
+                    </div>
+                    <h3 style="font-size: 1.125rem; font-weight: 700;">Staff Management</h3>
+                </div>
+                <button class="btn btn-primary btn-sm" onclick="document.getElementById('add-staff-modal').style.display='flex'">
+                    <i data-lucide="plus"></i> New Officer
+                </button>
             </div>
-            <button class="btn btn-primary btn-sm" onclick="document.getElementById('add-staff-modal').style.display='flex'">
-                <i data-lucide="user-plus"></i> New Staff
-            </button>
-        </div>
 
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Username</th>
-                        <th>Role</th>
-                        <th>Joined Date</th>
-                        <th style="text-align: right;">Action</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for user in users %}
-                    <tr>
-                        <td style="font-weight: 600;">{{ user.username }}</td>
-                        <td><span class="badge {% if user.role == 'admin' %}badge-success{% else %}badge-warning{% endif %}">{{ user.role.upper() }}</span></td>
-                        <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
-                        <td style="text-align: right;">
-                            {% if user.username != 'admin' and user.id != current_user.id %}
-                            <a href="{{ url_for('delete_staff', user_id=user.id) }}" style="color: var(--danger);" onclick="return confirm('Remove access for this user?')">
-                                <i data-lucide="trash-2" style="width: 18px;"></i>
-                            </a>
-                            {% else %}
-                            <span style="color: var(--text-muted); font-size: 0.75rem;">Protected</span>
-                            {% endif %}
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <div class="grid grid-2" style="gap: 1.5rem;">
+                {% for user in users %}
+                <div class="card" style="padding: 1.25rem; background: rgba(255,255,255,0.02); display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border-glass);">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ user.username }}" style="width: 52px; height: 52px; border-radius: 12px; border: 2px solid var(--border-glass); background: var(--bg-card);">
+                        <div>
+                            <p style="font-weight: 700; font-size: 1.1rem; margin-bottom: 2px;">{{ user.username }}</p>
+                            <span class="badge {% if user.role == 'admin' %}badge-success{% else %}badge-warning{% endif %}" style="font-size: 0.65rem;">{{ user.role.upper() }}</span>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 0.5rem;">Joined {{ user.created_at.strftime('%Y-%m-%d') }}</p>
+                        {% if user.username != 'admin' and user.id != current_user.id %}
+                        <a href="{{ url_for('delete_staff', user_id=user.id) }}" class="btn btn-outline" style="padding: 0.4rem 0.8rem; font-size: 0.8rem; color: var(--danger); border-color: rgba(239, 68, 68, 0.2);" onclick="return confirm('Revoke system access for {{ user.username }}?')">
+                            <i data-lucide="user-minus" style="width: 14px;"></i> Remove
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
         </div>
     </div>
 
-    <!-- Section 5: System Operations -->
-    <div class="card" style="margin-top: 2rem; border-color: rgba(239, 68, 68, 0.2);">
-        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem;">
-            <i data-lucide="shield-alert" style="color: var(--danger); width: 20px;"></i>
-            <h3 style="font-size: 1.125rem; color: var(--danger);">Advanced Utilities</h3>
+    <!-- Tab 4: Advanced -->
+    <div id="tab-advanced" class="tab-content animate-fade">
+        <div class="card" style="border: 1px solid rgba(239, 68, 68, 0.2);">
+            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 2.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-glass);">
+                <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(239, 68, 68, 0.1); color: var(--danger); display: flex; align-items: center; justify-content: center;">
+                    <i data-lucide="shield-alert" style="width: 18px;"></i>
+                </div>
+                <h3 style="font-size: 1.125rem; font-weight: 700; color: var(--danger);">System Utilities</h3>
+            </div>
+            
+            <div class="grid grid-3" style="gap: 1.5rem;">
+                <div class="card" style="padding: 1.5rem; background: rgba(255,255,255,0.02); text-align: center; border: 1px solid var(--border-glass);">
+                    <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(16, 185, 129, 0.1); color: var(--success); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+                        <i data-lucide="database"></i>
+                    </div>
+                    <h4 style="font-size: 0.95rem; font-weight: 700;">Full Database</h4>
+                    <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0.5rem 0 1.5rem;">Download .SQL backup file of everything.</p>
+                    <a href="{{ url_for('backup_database') }}" class="btn btn-outline" style="width: 100%; justify-content: center; border-color: var(--success); color: var(--success);">Generate Backup</a>
+                </div>
+
+                <div class="card" style="padding: 1.5rem; background: rgba(255,255,255,0.02); text-align: center; border: 1px solid var(--border-glass);">
+                    <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(14, 165, 233, 0.1); color: var(--accent); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+                        <i data-lucide="table"></i>
+                    </div>
+                    <h4 style="font-size: 0.95rem; font-weight: 700;">CSV Inventory</h4>
+                    <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0.5rem 0 1.5rem;">Export products catalog for Excel editing.</p>
+                    <a href="{{ url_for('export_products') }}" class="btn btn-outline" style="width: 100%; justify-content: center; border-color: var(--accent); color: var(--accent);">Export Data</a>
+                </div>
+
+                <div class="card" style="padding: 1.5rem; background: rgba(255,255,255,0.02); text-align: center; border: 1px dashed var(--danger);">
+                    <div style="width: 48px; height: 48px; border-radius: 50%; background: rgba(239, 68, 68, 0.1); color: var(--danger); display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem;">
+                        <i data-lucide="alert-octagon"></i>
+                    </div>
+                    <h4 style="font-size: 0.95rem; font-weight: 700; color: var(--danger);">Factory Reset</h4>
+                    <p style="font-size: 0.75rem; color: var(--text-muted); margin: 0.5rem 0 1.5rem;">Careful! This wipes all records permanently.</p>
+                    <button class="btn btn-outline" style="width: 100%; justify-content: center; border-color: var(--danger); color: var(--danger);" onclick="confirmReset()">Erase System</button>
+                    <form id="reset-form" action="{{ url_for('reset_factory') }}" method="POST" style="display: none;"></form>
+                </div>
+            </div>
         </div>
-        
-        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
-            <a href="{{ url_for('export_products') }}" class="btn btn-outline" style="flex: 1; border-color: var(--success); color: var(--success); text-decoration: none; justify-content: center;">
-                <i data-lucide="download-cloud"></i>
-                <span>Product Export</span>
-            </a>
-            <a href="{{ url_for('backup_database') }}" class="btn btn-outline" style="flex: 1; border-color: var(--accent); color: var(--accent); text-decoration: none; justify-content: center;">
-                <i data-lucide="database"></i>
-                <span>Full SQL Backup</span>
-            </a>
-            <button type="button" class="btn btn-outline" style="flex: 1; border-color: var(--danger); color: var(--danger); justify-content: center;" onclick="confirmReset()">
-                <i data-lucide="alert-octagon"></i>
-                <span>Hard Factory Reset</span>
-            </button>
-        </div>
-        <form id="reset-form" action="{{ url_for('reset_factory') }}" method="POST" style="display: none;"></form>
     </div>
 </div>
 
-<!-- Add Staff Modal -->
-<div id="add-staff-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(4px); z-index: 1001; align-items: center; justify-content: center; padding: 2rem;">
-    <div class="card animate-fade" style="width: 100%; max-width: 400px; padding: 2rem;">
+<!-- Recruitment Modal -->
+<div id="add-staff-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); z-index: 2000; align-items: center; justify-content: center; padding: 2rem;">
+    <div class="card animate-fade" style="width: 100%; max-width: 450px; padding: 2.5rem; border: 1px solid var(--border-glass);">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-            <h2 style="font-size: 1.25rem;">Add New Staff Member</h2>
+            <h2 style="font-size: 1.5rem; font-weight: 800;">Grant User Access</h2>
             <i data-lucide="x" style="cursor: pointer; color: var(--text-muted);" onclick="document.getElementById('add-staff-modal').style.display='none'"></i>
         </div>
         <form action="{{ url_for('add_staff') }}" method="POST">
             <div class="form-group">
-                <label>Username</label>
-                <input type="text" name="username" required autocomplete="off">
+                <label>System Username</label>
+                <input type="text" name="username" required placeholder="name.lastname" autocomplete="off">
             </div>
             <div class="form-group">
-                <label>Initial Password</label>
-                <input type="password" name="password" required>
+                <label>Security Password</label>
+                <input type="password" name="password" required placeholder="At least 8 characters">
             </div>
             <div class="form-group">
-                <label>System Role</label>
+                <label>Assigned Permission</label>
                 <select name="role">
-                    <option value="staff">Staff (Billing only)</option>
-                    <option value="admin">Admin (All Access)</option>
+                    <option value="staff">Staff (Daily Operations)</option>
+                    <option value="admin">Admin (Total Control)</option>
                 </select>
             </div>
-            <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 1rem;">
-                <i data-lucide="check"></i> <span>Create Account</span>
+            <button type="submit" class="btn btn-primary btn-lg" style="width: 100%; justify-content: center; margin-top: 2.5rem; padding: 1rem;">
+                <i data-lucide="user-plus"></i> <span>Initialize Account</span>
             </button>
         </form>
     </div>
 </div>
 
+<style>
+    .tab-btn {
+        flex: 1;
+        padding: 0.8rem 1.25rem;
+        border: none;
+        background: transparent;
+        color: var(--text-muted);
+        font-weight: 600;
+        font-size: 0.9rem;
+        border-radius: 0.75rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.6rem;
+        transition: all 0.3s ease;
+    }
+    .tab-btn:hover {
+        background: rgba(255,255,255,0.05);
+        color: var(--text-base);
+    }
+    .tab-btn.active {
+        background: var(--primary);
+        color: white;
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.2);
+    }
+    .tab-content {
+        display: none;
+    }
+    .tab-content.active {
+        display: block;
+    }
+</style>
+
 <script>
+function showTab(tabId, btn) {
+    // Hide all contents
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    // Deactivate all buttons
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    
+    // Show selected section
+    document.getElementById('tab-' + tabId).classList.add('active');
+    btn.classList.add('active');
+    
+    // Hide save bar on staff and advanced tabs if you want, but better to keep it
+    const saveBar = document.getElementById('save-bar');
+    if(tabId === 'staff' || tabId === 'advanced') {
+        saveBar.style.display = 'none';
+    } else {
+        saveBar.style.display = 'block';
+    }
+    
+    // Refresh icons for new view
+    lucide.createIcons();
+}
+
 function confirmReset() {
-    if (confirm("🚨 WARNING: This will delete ALL products, customers, invoices, and logs. Only the admin account will remain. This action CANNOT be undone. Are you absolutely sure?")) {
-        if (confirm("Final Confirmation: Type 'CONFIRM' below to proceed if you really want to clear the entire system.")) {
+    if (confirm("🚨 DANGER: This will delete EVERYTHING. Do you really want to proceed?")) {
+        const confirmText = prompt("Type 'HARD RESET' to confirm permanent deletion of all records:");
+        if (confirmText && confirmText.toUpperCase().trim() === 'HARD RESET') {
             document.getElementById('reset-form').submit();
+        } else {
+            alert("Reset cancelled. Confirmation text did not match.");
         }
     }
 }

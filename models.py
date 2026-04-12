@@ -25,6 +25,7 @@ class Product(db.Model):
     unit = db.Column(db.String(20), default='pcs') # kg, pcs, box etc.
     min_stock = db.Column(db.Integer, default=5) # for alerts
     barcode = db.Column(db.String(50), unique=True, index=True) # EAN-13, UPC etc.
+    image_url = db.Column(db.String(255), default='') # Path to product image
 
 class Customer(db.Model):
     id = db.Column(db.Integer, primary_key=True)

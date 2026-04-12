@@ -51,6 +51,12 @@ with app.app_context():
     except Exception:
         db.session.rollback()
 
+    try:
+        db.session.execute(db.text('ALTER TABLE product ADD COLUMN image_url VARCHAR(255) DEFAULT ""'))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
 @login_manager.user_loader
 def load_user(user_id):
     return db.session.get(User, int(user_id))
@@ -173,6 +179,10 @@ def update_profile():
     user = db.session.get(User, current_user.id)
     
     # Handle optional image upload
+    chosen_avatar = request.form.get('chosen_avatar')
+    if chosen_avatar:
+        user.profile_image = chosen_avatar
+        
     if 'profile_image' in request.files:
         file = request.files['profile_image']
         if file and file.filename != '':
@@ -235,6 +245,7 @@ def dashboard():
     today = datetime.now().date()
     yesterday = today - timedelta(days=1)
     thirty_days_ago = today - timedelta(days=30)
+    settings = Settings.query.first()
     
     # 1. Sales & Growth
     today_sales = float(db.session.query(db.func.sum(Invoice.final_amount)).filter(db.func.date(Invoice.date) == today).scalar() or 0.0)
@@ -284,6 +295,7 @@ def dashboard():
         .order_by(db.func.sum(Invoice.final_amount).desc()).limit(5).all()
 
     return render_template('dashboard.html', 
+                           settings=settings,
                            today_sales=today_sales, 
                            total_invoices=total_invoices, 
                            low_stock_count=low_stock_count, 
@@ -367,13 +379,23 @@ def add_product():
         flash(f'Barcode {barcode} is already assigned to another product!', 'danger')
         return redirect(url_for('products'))
         
+    # Handle image upload
+    image_url = ''
+    if 'image' in request.files:
+        file = request.files['image']
+        if file and file.filename:
+            filename = secure_filename(f"prod_{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}")
+            file.save(os.path.join('static/uploads/products', filename))
+            image_url = f'uploads/products/{filename}'
+
     new_product = Product(
         name=name, 
         category=category, 
         price=float(price), 
         stock=int(stock), 
         unit=unit,
-        barcode=barcode if barcode else None
+        barcode=barcode if barcode else None,
+        image_url=image_url
     )
     db.session.add(new_product)
     db.session.flush()
@@ -413,6 +435,14 @@ def edit_product(product_id):
     product.price = float(request.form.get('price'))
     product.stock = int(request.form.get('stock'))
     product.unit = request.form.get('unit')
+    
+    # Handle image update
+    if 'image' in request.files:
+        file = request.files['image']
+        if file and file.filename:
+            filename = secure_filename(f"prod_{product.id}_{file.filename}")
+            file.save(os.path.join('static/uploads/products', filename))
+            product.image_url = f'uploads/products/{filename}'
     
     db.session.commit()
     flash(f'Product {product.name} updated successfully!', 'success')
@@ -917,20 +947,19 @@ def pay_staff(payroll_id):
 @admin_required
 def reset_factory():
     try:
-        # Delete data from all tables except Users and Settings
-        # Using session.query().delete() for efficiency
-        db.session.query(InvoiceItem).delete()
-        db.session.query(Invoice).delete()
-        db.session.query(StockLog).delete()
-        db.session.query(Expense).delete()
-        db.session.query(Customer).delete()
-        db.session.query(Product).delete()
+        # Fast Reset: Direct SQL for performance & stability
+        db.session.execute(db.text('SET FOREIGN_KEY_CHECKS = 0'))
         
-        # Keep only the admin user
-        admin_user = User.query.filter_by(username='admin').first()
-        User.query.filter(User.id != admin_user.id).delete()
+        # 1. Clear all transaction & master data
+        tables = ['invoice_item', 'purchase_item', 'stock_log', 'payroll', 'attendance', 
+                  'invoice', 'purchase', 'expense', 'customer', 'supplier', 'product']
+        for table in tables:
+            db.session.execute(db.text(f'DELETE FROM {table}'))
         
-        # Reset Settings to default
+        # 2. Keep only the root admin
+        db.session.execute(db.text("DELETE FROM user WHERE username != 'admin'"))
+        
+        # 3. Reset settings to brand new defaults
         settings = Settings.query.first()
         if settings:
             settings.store_name = 'SVMKART'
@@ -946,11 +975,19 @@ def reset_factory():
             settings.terms_conditions = '1. Goods once sold cannot be returned.\n2. Warranty as per manufacturer terms.'
             settings.footer_note = 'Thank you for shopping with SVMKART!'
             
+        # 4. Success and Security reset
+        db.session.execute(db.text('SET FOREIGN_KEY_CHECKS = 1'))
         db.session.commit()
-        flash('System has been reset to factory defaults successfully.', 'success')
+        
+        logout_user() # Force logout to re-sync
+        flash('SYSTEM HARD RESET SUCCESSFUL! Password reset to admin123', 'success')
+        return redirect(url_for('login'))
+        
     except Exception as e:
         db.session.rollback()
+        db.session.execute(db.text('SET FOREIGN_KEY_CHECKS = 1'))
         flash(f'Error during reset: {str(e)}', 'danger')
+        return redirect(url_for('settings'))
         
     return redirect(url_for('settings'))
 

@@ -31,6 +31,7 @@
             <table>
                 <thead>
                     <tr>
+                        <th style="width: 50px;">Image</th>
                         <th>Product Name</th>
                         <th>Barcode</th>
                         <th>Category</th>
@@ -44,6 +45,11 @@
                 <tbody>
                     {% for product in products %}
                     <tr>
+                        <td>
+                            <img src="{{ url_for('static', filename=product.image_url if product.image_url else 'img/placeholder-product.png') }}" 
+                                 onerror="this.src='https://api.dicebear.com/7.x/shapes/svg?seed={{ product.name }}'"
+                                 style="width: 40px; height: 40px; border-radius: 8px; object-fit: cover; background: white; border: 1px solid var(--border-glass);">
+                        </td>
                         <td style="font-weight: 600;">{{ product.name }}</td>
                         <td>
                             <div style="display: flex; align-items: center; gap: 0.5rem; font-family: monospace; font-size: 0.8rem; background: rgba(0,0,0,0.05); padding: 0.25rem 0.5rem; border-radius: 4px;">
@@ -82,7 +88,7 @@
                                    <i data-lucide="printer" style="width: 18px; color: var(--success);"></i>
                                 </a>
                                 <a href="javascript:void(0)" 
-                                   onclick="openEditModal('{{ product.id }}', '{{ product.name }}', '{{ product.category }}', '{{ product.price }}', '{{ product.stock }}', '{{ product.unit }}', '{{ product.barcode }}')"
+                                   onclick="openEditModal('{{ product.id }}', '{{ product.name }}', '{{ product.category }}', '{{ product.price }}', '{{ product.stock }}', '{{ product.unit }}', '{{ product.barcode }}', '{{ product.image_url }}')"
                                    style="color: var(--accent);" title="Edit Product">
                                    <i data-lucide="edit-3" style="width: 18px;"></i>
                                 </a>
@@ -112,7 +118,14 @@
             <h2 style="font-size: 1.25rem;">Add New Product</h2>
             <i data-lucide="x" style="cursor: pointer; color: var(--text-muted);" onclick="document.getElementById('add-product-modal').style.display='none'"></i>
         </div>
-        <form action="{{ url_for('add_product') }}" method="POST">
+        <form action="{{ url_for('add_product') }}" method="POST" enctype="multipart/form-data">
+            <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
+                <div class="form-group" style="flex: 1;">
+                    <label>Product Image</label>
+                    <input type="file" name="image" accept="image/*" style="padding: 0.5rem; border: 1.5px dashed var(--border-glass); background: rgba(255,255,255,0.05);">
+                </div>
+            </div>
+
             <div class="form-group">
                 <label>Product Name</label>
                 <input type="text" name="name" required placeholder="e.g. Wireless Mouse">
@@ -196,7 +209,17 @@
             <h2 style="font-size: 1.25rem;">Edit Product</h2>
             <i data-lucide="x" style="cursor: pointer; color: var(--text-muted);" onclick="document.getElementById('edit-product-modal').style.display='none'"></i>
         </div>
-        <form id="edit-product-form" method="POST">
+        <form id="edit-product-form" method="POST" enctype="multipart/form-data">
+            <div style="display: flex; gap: 1rem; margin-bottom: 2rem; align-items: center; background: rgba(0,0,0,0.05); padding: 1rem; border-radius: 0.75rem;">
+                <div style="flex: 1;">
+                    <label>Change Product Image</label>
+                    <input type="file" name="image" accept="image/*" style="font-size: 0.8rem;">
+                </div>
+                <div id="edit-image-preview">
+                    <img src="" id="edit-preview-img" style="width: 60px; height: 60px; border-radius: 8px; object-fit: cover; border: 1.5px solid var(--primary); background: white;">
+                </div>
+            </div>
+
             <div class="form-group">
                 <label>Product Name</label>
                 <input type="text" name="name" id="edit-name" required>
@@ -265,7 +288,7 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 <script>
-    function openEditModal(id, name, category, price, stock, unit, barcode) {
+    function openEditModal(id, name, category, price, stock, unit, barcode, imageUrl) {
         const modal = document.getElementById('edit-product-modal');
         const form = document.getElementById('edit-product-form');
         
@@ -276,6 +299,15 @@
         document.getElementById('edit-stock').value = stock;
         document.getElementById('edit-unit').value = unit;
         document.getElementById('edit-barcode').value = barcode !== 'None' ? barcode : '';
+        
+        // Image preview
+        const previewImg = document.getElementById('edit-preview-img');
+        if (imageUrl && imageUrl !== '') {
+            previewImg.src = `/static/${imageUrl}`;
+        } else {
+            previewImg.src = `https://api.dicebear.com/7.x/shapes/svg?seed=${name}`;
+        }
+
         
         modal.style.display = 'flex';
         lucide.createIcons();

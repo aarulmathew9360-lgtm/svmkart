@@ -1,293 +1,432 @@
 {% extends 'base.html' %}
 
-{% block title %}Dashboard Overview{% endblock %}
+{% block title %}Executive Intelligence | Dashboard{% endblock %}
 
 {% block content %}
-<div class="grid grid-4 animate-fade">
-    <div class="card stat-card">
-        <div class="stat-icon" style="background: rgba(79, 70, 229, 0.1); color: var(--primary);">
-            <i data-lucide="indian-rupee"></i>
-        </div>
-        <div class="stat-info">
-            <h3>Today's Sales</h3>
-            <p>₹{{ "{:,.2f}".format(today_sales) }}</p>
-        </div>
-    </div>
-    <div class="card stat-card">
-        <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--success);">
-            <i data-lucide="file-text"></i>
-        </div>
-        <div class="stat-info">
-            <h3>Total Invoices</h3>
-            <p>{{ total_invoices }}</p>
-        </div>
-    </div>
-    <div class="card stat-card">
-        <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--warning);">
-            <i data-lucide="alert-triangle"></i>
-        </div>
-        <div class="stat-info">
-            <h3>Low Stock</h3>
-            <p>{{ low_stock_count }}</p>
-        </div>
-    </div>
-    {% if current_user.role == 'admin' %}
-    <div class="card stat-card">
-        <div class="stat-icon" style="background: rgba(14, 165, 233, 0.1); color: var(--accent);">
-            <i data-lucide="trending-up"></i>
-        </div>
-        <div class="stat-info">
-            <h3>Revenue Growth</h3>
-            <p>{{ "{:+.1f}".format(growth_pct) }}%</p>
-        </div>
-    </div>
-    <div class="card stat-card">
-        <div class="stat-icon" style="background: rgba(236, 72, 153, 0.1); color: #ec4899;">
-            <i data-lucide="bar-chart-3"></i>
-        </div>
-        <div class="stat-info">
-            <h3>Monthly Profit</h3>
-            <p>₹{{ "{:,.2f}".format(monthly_profit) }}</p>
-        </div>
-    </div>
-    {% endif %}
-</div>
-
-<div class="grid grid-2" style="margin-top: 2rem;">
-    {% if current_user.role == 'admin' %}
-    <!-- Sales Analytics Chart -->
-    <div class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <h2 style="font-size: 1.125rem;">Global Sales Analytics (Last 7 Days)</h2>
-            <i data-lucide="more-horizontal" style="color: var(--text-muted); cursor: pointer;"></i>
-        </div>
-        <div class="chart-container">
-            <canvas id="salesChart" 
-                    data-labels='{{ labels|safe }}' 
-                    data-values='{{ sales_data|safe }}'
-                    data-profit='{{ profit_data|safe }}'></canvas>
-        </div>
-    </div>
-    {% else %}
-    <!-- Sales Analytics Chart -->
-    <div class="card">
-        <div style="text-align: center; padding: 2rem;">
-            <i data-lucide="shield-alert" style="width: 48px; height: 48px; color: var(--text-muted); margin-bottom: 1rem;"></i>
-            <h2 style="font-size: 1.125rem;">Restricted View</h2>
-            <p style="color: var(--text-muted);">Only administrators can see store financial charts.</p>
-        </div>
-    </div>
-    {% endif %}
+<div class="animate-fade">
     
-    <!-- Top Selling Products -->
-    <div class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <h2 style="font-size: 1.125rem;">Top Selling Products</h2>
-            <i data-lucide="award" style="color: var(--warning); width: 18px;"></i>
+    <!-- Premium Hero Section -->
+    <div style="margin-bottom: 2.5rem; display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, rgba(79, 70, 229, 0.1), rgba(124, 58, 237, 0.05)); padding: 2.5rem; border-radius: 1.5rem; border: 1px solid var(--border-glass); position: relative; overflow: hidden;">
+        <div style="position: absolute; top: -50px; right: -50px; width: 200px; height: 200px; background: var(--primary); filter: blur(100px); opacity: 0.1; z-index: 0;"></div>
+        <div style="z-index: 1;">
+            <h1 style="font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 0.5rem;">
+                <span style="color: var(--text-muted); font-weight: 400;">Good Day,</span> {{ current_user.username.title() }}! 👋
+            </h1>
+            <p style="color: var(--text-muted); font-size: 1.05rem;">Manage your retail empire at **{{ settings.store_name }}** with real-time accuracy.</p>
         </div>
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Product</th>
-                        <th>Sold Qty</th>
-                        <th>Trend</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for name, qty in top_selling %}
-                    <tr>
-                        <td style="font-weight: 600;">{{ name }}</td>
-                        <td>{{ qty }} units</td>
-                        <td><div style="width: 100%; height: 6px; background: rgba(0,0,0,0.1); border-radius: 3px;"><div style="width: 70%; height: 100%; background: var(--success); border-radius: 3px;"></div></div></td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="3" style="text-align: center; color: var(--text-muted);">No sales data yet.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div style="display: flex; gap: 1rem; z-index: 1;">
+            <a href="{{ url_for('billing') }}" class="btn btn-primary" style="padding: 0.8rem 1.5rem; border-radius: 1rem; box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);">
+                <i data-lucide="plus-circle"></i> <span data-i18n="billing">New Invoice</span>
+            </a>
         </div>
     </div>
-</div>
 
-<!-- Low Stock Highlights -->
-<div class="card" style="margin-top: 2rem;">
-    <h2 style="font-size: 1.125rem; margin-bottom: 1rem; color: var(--danger);">Critical Low Stock</h2>
-    <div class="grid grid-4">
-        {% for item in low_stock_items %}
-        <div style="padding: 1rem; background: rgba(239, 68, 68, 0.05); border-radius: 0.75rem; border: 1px solid rgba(239, 68, 68, 0.1);">
-            <div style="font-weight: 600;">{{ item.name }}</div>
-            <div style="font-size: 0.875rem; color: var(--danger);">Only {{ item.stock }} left</div>
+    <!-- Smart KPI Cards -->
+    <div class="grid grid-4" style="gap: 1.5rem;">
+        <div class="card premium-card" style="--card-color: var(--primary);">
+            <div class="card-inner">
+                <div class="stat-icon-new"><i data-lucide="banknote"></i></div>
+                <div class="stat-value-group">
+                    <h3 data-i18n="today_sales">Today's Revenue</h3>
+                    <p class="value-text">₹{{ "{:,.2f}".format(today_sales) }}</p>
+                    <span class="trend-up"><i data-lucide="arrow-up-right"></i> +{{ "{:,.1f}".format(growth_pct) }}%</span>
+                </div>
+            </div>
         </div>
-        {% else %}
-        <p style="color: var(--text-muted);">All items in stock!</p>
-        {% endfor %}
+        <div class="card premium-card" style="--card-color: var(--success);">
+            <div class="card-inner">
+                <div class="stat-icon-new"><i data-lucide="file-check"></i></div>
+                <div class="stat-value-group">
+                    <h3 data-i18n="total_invoices">Verified Orders</h3>
+                    <p class="value-text">{{ total_invoices }}</p>
+                    <span style="color: var(--text-muted); font-size: 0.75rem;">Processed today</span>
+                </div>
+            </div>
+        </div>
+        <div class="card premium-card" style="--card-color: var(--warning);">
+            <div class="card-inner">
+                <div class="stat-icon-new"><i data-lucide="package-search"></i></div>
+                <div class="stat-value-group">
+                    <h3 data-i18n="low_stock_alerts">Stock Alerts</h3>
+                    <p class="value-text">{{ low_stock_count }}</p>
+                    <span class="trend-down"><i data-lucide="alert-circle"></i> Requires attention</span>
+                </div>
+            </div>
+        </div>
+        <div class="card premium-card" style="--card-color: #ec4899;">
+            <div class="card-inner">
+                <div class="stat-icon-new"><i data-lucide="gem"></i></div>
+                <div class="stat-value-group">
+                    <h3>Net Capital</h3>
+                    <p class="value-text">₹{{ "{:,.0f}".format(monthly_profit) }}</p>
+                    <span style="color: var(--text-muted); font-size: 0.75rem;">Projected earnings</span>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
 
-<!-- Staff Performance Leaderboard -->
-<div class="card" style="margin-top: 2rem; background: linear-gradient(135deg, var(--bg-card) 0%, rgba(79, 70, 229, 0.05) 100%); border: 1.5px solid rgba(79, 70, 229, 0.2);">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-        <h2 style="font-size: 1.25rem; display: flex; align-items: center; gap: 0.5rem;"><i data-lucide="trophy" style="color: var(--warning);"></i> 30-Day Staff Performance</h2>
-        <span class="badge badge-primary">Team Sales</span>
-    </div>
-    <div class="grid grid-4">
-        {% for name, sales in staff_sales %}
-        <div style="padding: 1.5rem; text-align: center; background: rgba(255, 255, 255, 0.05); border-radius: 1rem; border: 1px solid rgba(255, 255, 255, 0.1); position: relative;">
-            {% if loop.index == 1 %}
-            <div style="position: absolute; top: -10px; right: -10px; width: 30px; height: 30px; background: gold; border-radius: 50%; color: black; font-weight: 800; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(255, 215, 0, 0.4);">1</div>
-            <i data-lucide="star" style="color: gold; width: 40px; height: 40px; margin-bottom: 0.5rem; fill: gold;"></i>
+    <div class="grid grid-3" style="margin-top: 2.5rem; gap: 2rem;">
+        <!-- Analytics Main -->
+        <div class="card" style="grid-column: span 2; padding: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+                <div>
+                    <h2 style="font-size: 1.25rem; font-weight: 800;">Financial Performance Matrix</h2>
+                    <p style="color: var(--text-muted); font-size: 0.85rem;">Historical data comparison for the last 7 cycles</p>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <span class="badge" style="background: rgba(79, 70, 229, 0.1); color: var(--primary);">Revenue</span>
+                    <span class="badge" style="background: rgba(16, 185, 129, 0.1); color: var(--success);">Profit</span>
+                </div>
+            </div>
+            {% if current_user.role == 'admin' %}
+            <div style="height: 350px;">
+                <canvas id="salesChart" 
+                        data-labels='{{ labels|safe }}' 
+                        data-values='{{ sales_data|safe }}'
+                        data-profit='{{ profit_data|safe }}'></canvas>
+            </div>
             {% else %}
-            <img src="https://api.dicebear.com/7.x/initials/svg?seed={{ name }}&backgroundColor=3b82f6,10b981,f59e0b" alt="Avatar" style="width: 40px; height: 40px; border-radius: 50%; margin-bottom: 0.5rem;">
+            <div style="height: 350px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.02); border-radius: 1rem; border: 1px dashed var(--border-glass);">
+                <div style="text-align: center;">
+                    <i data-lucide="lock" style="width: 48px; height: 48px; color: var(--text-muted); margin-bottom: 1rem;"></i>
+                    <p style="color: var(--text-muted);">Confidential analytical data restricted to Admins.</p>
+                </div>
+            </div>
             {% endif %}
-            <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-base);">{{ name }}</div>
-            <div style="font-size: 0.9rem; color: var(--primary); font-weight: 600;">₹{{ "{:,.0f}".format(sales) }}</div>
-            <div style="height: 4px; border-radius: 2px; background: rgba(79, 70, 229, 0.2); margin-top: 0.75rem;">
-                <div style="height: 100%; border-radius: 2px; background: var(--primary); width: {{ (sales / (staff_sales[0][1] if staff_sales[0][1] > 0 else 1)) * 100 }}%;"></div>
-            </div>
         </div>
-        {% else %}
-        <p style="color: var(--text-muted); grid-column: span 4; text-align: center;">No staff sales recorded this month.</p>
-        {% endfor %}
-    </div>
-</div>
 
-<div class="grid grid-2" style="margin-top: 2rem;">
-    <!-- Loyal Customers -->
-    <div class="card">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
-            <h2 style="font-size: 1.125rem;">Loyal Customers</h2>
-            <i data-lucide="users" style="color: var(--primary); width: 18px;"></i>
-        </div>
-        <div class="table-container">
-            <table>
-                <thead>
-                    <tr>
-                        <th>Customer</th>
-                        <th>Total Spend</th>
-                        <th>Rank</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for name, spend in top_customers %}
-                    <tr>
-                        <td style="font-weight: 600;">{{ name }}</td>
-                        <td>₹{{ "{:,.2f}".format(spend) }}</td>
-                        <td><span class="badge badge-primary">TOP {{ loop.index }}</span></td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="3" style="text-align: center; color: var(--text-muted);">No customer data yet.</td>
-                    </tr>
+        <!-- Activity Feed / Quick Logs -->
+        <div class="card" style="padding: 1.5rem;">
+            <h2 style="font-size: 1.15rem; font-weight: 800; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                <i data-lucide="pulse" style="color: var(--primary);"></i> Live Pulse
+            </h2>
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                {% for name, qty in top_selling[:5] %}
+                <div style="display: flex; align-items: center; justify-content: space-between; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-glass);">
+                    <div style="display: flex; align-items: center; gap: 0.75rem;">
+                        <div style="width: 36px; height: 36px; border-radius: 8px; background: rgba(79, 70, 229, 0.05); color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.7rem;">
+                            {{ loop.index }}
+                        </div>
+                        <div>
+                            <p style="font-weight: 600; font-size: 0.9rem;">{{ name }}</p>
+                            <p style="font-size: 0.75rem; color: var(--text-muted);">High Demand</p>
+                        </div>
+                    </div>
+                    <span style="font-weight: 700; font-size: 0.9rem;">{{ qty }}</span>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div style="margin-top: 2rem; padding: 1rem; background: rgba(239, 68, 68, 0.05); border-radius: 1rem; border: 1px solid rgba(239, 68, 68, 0.1);">
+                <h3 style="font-size: 0.85rem; font-weight: 700; color: var(--danger); margin-bottom: 0.75rem;">Stock Attention Needed</h3>
+                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                    {% for item in low_stock_items[:3] %}
+                    <div style="font-size: 0.8rem; display: flex; justify-content: space-between;">
+                        <span>{{ item.name }}</span>
+                        <span style="color: var(--danger); font-weight: 700;">{{ item.stock }} left</span>
+                    </div>
                     {% endfor %}
-                </tbody>
-            </table>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Quick Actions -->
-    <div class="card">
-        <h2 style="font-size: 1.125rem; margin-bottom: 1.5rem;">System Health</h2>
-        <div style="display: flex; flex-direction: column; gap: 1rem;">
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: rgba(0,0,0,0.05); border-radius: 0.5rem;">
-                <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <i data-lucide="database" style="color: var(--accent);"></i>
-                    <span>Database Status</span>
-                </div>
-                <span style="color: var(--success); font-weight: 600;">ONLINE</span>
+    <!-- Staff Performance Leaderboard Upgrade -->
+    <div class="card" style="margin-top: 2.5rem; background: linear-gradient(135deg, var(--bg-card), rgba(79, 70, 229, 0.05)); border: 1px solid var(--border-glass);">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; padding: 0.5rem;">
+            <div>
+                <h2 style="font-size: 1.25rem; font-weight: 800; display: flex; align-items: center; gap: 0.75rem;">
+                    <i data-lucide="trophy" style="color: var(--warning);"></i> Retail Warriors Leaderboard
+                </h2>
+                <p style="color: var(--text-muted); font-size: 0.85rem;">Top performing officers in the last 30 business cycles</p>
             </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: rgba(0,0,0,0.05); border-radius: 0.5rem;">
-                <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <i data-lucide="server" style="color: var(--accent);"></i>
-                    <span>Storage Usage</span>
+        </div>
+        <div class="grid grid-4" style="gap: 1.5rem;">
+            {% for name, sales in staff_sales %}
+            <div class="warrior-card">
+                <div class="rank-badge">#{{ loop.index }}</div>
+                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed={{ name }}" class="warrior-img">
+                <h3 class="warrior-name">{{ name }}</h3>
+                <p class="warrior-sales">₹{{ "{:,.0f}".format(sales) }}</p>
+                <div class="progress-container">
+                    <div class="progress-bar" style="width: {{ (sales / (staff_sales[0][1] if staff_sales[0][1] > 0 else 1)) * 100 }}%;"></div>
                 </div>
-                <span style="font-weight: 600;">12%</span>
             </div>
-            <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: rgba(0,0,0,0.05); border-radius: 0.5rem;">
-                <div style="display: flex; align-items: center; gap: 0.75rem;">
-                    <i data-lucide="refresh-cw" style="color: var(--accent);"></i>
-                    <span>Last Sync</span>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Final Row: Customer Loyalty & System Diagnostics -->
+    <div class="grid grid-2" style="margin-top: 2.5rem; gap: 2rem;">
+        <!-- Loyal Customers -->
+        <div class="card" style="padding: 1.5rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                <h2 style="font-size: 1.15rem; font-weight: 800;">Top Value Customers</h2>
+                <i data-lucide="award" style="color: var(--warning);"></i>
+            </div>
+            <div class="table-container">
+                <table style="width: 100%;">
+                    <thead>
+                        <tr style="text-align: left; color: var(--text-muted); font-size: 0.8rem;">
+                            <th style="padding: 0.5rem 0;">Identity</th>
+                            <th style="padding: 0.5rem 0; text-align: right;">Total Contribution</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for name, spend in top_customers %}
+                        <tr style="border-bottom: 1px solid var(--border-glass);">
+                            <td style="padding: 0.75rem 0; font-weight: 600;">{{ name }}</td>
+                            <td style="padding: 0.75rem 0; text-align: right; color: var(--success); font-weight: 700;">₹{{ "{:,.2f}".format(spend) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- System Diagnostics -->
+        <div class="card" style="padding: 1.5rem;">
+            <h2 style="font-size: 1.15rem; font-weight: 800; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.5rem;">
+                <i data-lucide="activity" style="color: var(--accent);"></i> Real-time Diagnostics
+            </h2>
+            <div style="display: flex; flex-direction: column; gap: 1rem;">
+                <div class="health-item">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <i data-lucide="database" style="color: var(--success); width: 18px;"></i>
+                        <span style="font-size: 0.9rem; font-weight: 600;">Main Database</span>
+                    </div>
+                    <span class="badge badge-success" style="font-size: 0.65rem;">SYNCHRONIZED</span>
                 </div>
-                <span>Just Now</span>
+                <div class="health-item">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <i data-lucide="hard-drive" style="color: var(--accent); width: 18px;"></i>
+                        <span style="font-size: 0.9rem; font-weight: 600;">Asset Repository</span>
+                    </div>
+                    <span style="font-size: 0.85rem; font-weight: 700; color: var(--text-muted);">Optimal</span>
+                </div>
+                <div class="health-item">
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <i data-lucide="zap" style="color: var(--warning); width: 18px;"></i>
+                        <span style="font-size: 0.9rem; font-weight: 600;">Latency</span>
+                    </div>
+                    <span style="font-size: 0.85rem; font-weight: 700;">4ms</span>
+                </div>
             </div>
         </div>
     </div>
+
 </div>
 
+<style>
+    .health-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 0.85rem;
+        background: rgba(255,255,255,0.02);
+        border-radius: 0.75rem;
+        border: 1px solid var(--border-glass);
+    }
+    .premium-card {
+        padding: 1.75rem;
+        background: rgba(255, 255, 255, 0.03);
+        border: 1px solid var(--border-glass);
+        transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        overflow: hidden;
+        position: relative;
+    }
+    .premium-card:hover {
+        transform: translateY(-8px);
+        background: rgba(255, 255, 255, 0.05);
+        border-color: var(--card-color);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+    }
+    .stat-icon-new {
+        width: 48px;
+        height: 48px;
+        background: rgba(255, 255, 255, 0.05);
+        color: var(--card-color);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1.25rem;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .premium-card h3 {
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: var(--text-muted);
+        margin-bottom: 0.5rem;
+        font-weight: 700;
+    }
+    .value-text {
+        font-size: 1.6rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+        letter-spacing: -0.02em;
+    }
+    .trend-up {
+        color: var(--success);
+        font-size: 0.8rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    .trend-down {
+        color: var(--danger);
+        font-size: 0.8rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+    
+    /* Warrior Leaderboard Styles */
+    .warrior-card {
+        text-align: center;
+        padding: 1.5rem;
+        background: rgba(255, 255, 255, 0.02);
+        border-radius: 1.25rem;
+        border: 1px solid var(--border-glass);
+        position: relative;
+        transition: all 0.3s ease;
+    }
+    .warrior-card:hover {
+        background: rgba(255, 255, 255, 0.04);
+        border-color: var(--primary);
+    }
+    .rank-badge {
+        position: absolute;
+        top: 0.75rem;
+        left: 0.75rem;
+        padding: 0.25rem 0.6rem;
+        background: var(--bg-card);
+        border: 1px solid var(--border-glass);
+        border-radius: 0.5rem;
+        font-size: 0.65rem;
+        font-weight: 800;
+        color: var(--text-muted);
+    }
+    .warrior-img {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        margin: 0 auto 1rem;
+        background: var(--bg-card);
+        border: 2px solid var(--border-glass);
+        padding: 4px;
+    }
+    .warrior-name {
+        font-weight: 800;
+        font-size: 1.05rem;
+        margin-bottom: 2px;
+    }
+    .warrior-sales {
+        color: var(--primary);
+        font-weight: 700;
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+    }
+    .progress-container {
+        height: 5px;
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    .progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, var(--primary), var(--accent));
+        border-radius: 10px;
+    }
+</style>
 {% endblock %}
 
 {% block scripts %}
-<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     const canvas = document.getElementById('salesChart');
-    const ctx = canvas.getContext('2d');
-    const labels = JSON.parse(canvas.dataset.labels);
-    const values = JSON.parse(canvas.dataset.values);
-    const profitValues = JSON.parse(canvas.dataset.profit);
-    
-    // Gradients
-    const salesGradient = ctx.createLinearGradient(0, 0, 0, 400);
-    salesGradient.addColorStop(0, 'rgba(79, 70, 229, 0.2)');
-    salesGradient.addColorStop(1, 'rgba(79, 70, 229, 0)');
+    if (canvas) {
+        const ctx = canvas.getContext('2d');
+        const labels = JSON.parse(canvas.dataset.labels);
+        const values = JSON.parse(canvas.dataset.values);
+        const profitValues = JSON.parse(canvas.dataset.profit);
+        
+        const salesGradient = ctx.createLinearGradient(0, 0, 0, 400);
+        salesGradient.addColorStop(0, 'rgba(79, 70, 229, 0.3)');
+        salesGradient.addColorStop(1, 'rgba(79, 70, 229, 0)');
 
-    const profitGradient = ctx.createLinearGradient(0, 0, 0, 400);
-    profitGradient.addColorStop(0, 'rgba(16, 185, 129, 0.2)');
-    profitGradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
+        const profitGradient = ctx.createLinearGradient(0, 0, 0, 400);
+        profitGradient.addColorStop(0, 'rgba(16, 185, 129, 0.3)');
+        profitGradient.addColorStop(1, 'rgba(16, 185, 129, 0)');
 
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: labels,
-            datasets: [
-                {
-                    label: 'Revenue (₹)',
-                    data: values,
-                    borderColor: '#4f46e5',
-                    borderWidth: 3,
-                    tension: 0.4,
-                    fill: true,
-                    backgroundColor: salesGradient,
-                    pointBackgroundColor: '#4f46e5',
-                    pointRadius: 3
-                },
-                {
-                    label: 'Net Profit (₹)',
-                    data: profitValues,
-                    borderColor: '#10b981',
-                    borderWidth: 3,
-                    tension: 0.4,
-                    fill: true,
-                    backgroundColor: profitGradient,
-                    pointBackgroundColor: '#10b981',
-                    pointRadius: 3
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { 
-                    display: true,
-                    position: 'top',
-                    labels: { color: '#94a3b8', boxWidth: 12 }
-                }
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Gross Revenue',
+                        data: values,
+                        borderColor: '#4f46e5',
+                        borderWidth: 4,
+                        tension: 0.45,
+                        fill: true,
+                        backgroundColor: salesGradient,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#4f46e5',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    },
+                    {
+                        label: 'Net Profits',
+                        data: profitValues,
+                        borderColor: '#10b981',
+                        borderWidth: 4,
+                        tension: 0.45,
+                        fill: true,
+                        backgroundColor: profitGradient,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#10b981',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
+                    }
+                ]
             },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                    ticks: { color: '#94a3b8' }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { 
+                        position: 'bottom',
+                        labels: { color: '#94a3b8', usePointStyle: true, font: { weight: 'bold' } }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        padding: 12,
+                        titleFont: { size: 14, weight: 'bold' },
+                        bodyFont: { size: 13 },
+                        cornerRadius: 8,
+                        displayColors: false
+                    }
                 },
-                x: {
-                    grid: { display: false },
-                    ticks: { color: '#94a3b8' }
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        grid: { color: 'rgba(255, 255, 255, 0.05)', borderDash: [5, 5] },
+                        ticks: { color: '#94a3b8', font: { size: 11 } }
+                    },
+                    x: {
+                        grid: { display: false },
+                        ticks: { color: '#94a3b8', font: { size: 11 } }
+                    }
                 }
             }
-        }
-    });
+        });
+    }
 </script>
 {% endblock %}

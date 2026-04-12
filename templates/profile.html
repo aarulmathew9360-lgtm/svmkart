@@ -135,10 +135,14 @@
             <div class="glass-card" style="text-align: center;">
                 <label for="profile_image_input" style="cursor: pointer; display: inline-block; position: relative; width: 140px; height: 140px;">
                     <div style="padding: 5px; background: linear-gradient(135deg, var(--primary), var(--success)); border-radius: 50%; box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);">
-                        {% if current_user.profile_image and current_user.profile_image != 'default.png' %}
-                        <img src="{{ url_for('static', filename='uploads/profiles/' + current_user.profile_image) }}" alt="PFP" style="width: 130px; height: 130px; border-radius: 50%; border: 4px solid var(--bg-card); object-fit: cover; display: block;">
+                        {% if current_user.profile_image %}
+                            {% if current_user.profile_image.startswith('http') or current_user.profile_image.startswith('avataaars') %}
+                                <img src="https://api.dicebear.com/7.x/{{ current_user.profile_image }}" alt="PFP" style="width: 130px; height: 130px; border-radius: 50%; border: 4px solid var(--bg-card); display: block;">
+                            {% else %}
+                                <img src="{{ url_for('static', filename='uploads/profiles/' + current_user.profile_image) }}" alt="PFP" style="width: 130px; height: 130px; border-radius: 50%; border: 4px solid var(--bg-card); object-fit: cover; display: block;">
+                            {% endif %}
                         {% else %}
-                        <img src="https://api.dicebear.com/7.x/initials/svg?seed={{ current_user.username }}&backgroundColor=252830&textColor=ffffff&fontWeight=900" alt="PFP" style="width: 130px; height: 130px; border-radius: 50%; border: 4px solid var(--bg-card); display: block;">
+                            <img src="https://api.dicebear.com/7.x/initials/svg?seed={{ current_user.username }}&backgroundColor=252830&textColor=ffffff&fontWeight=900" alt="PFP" style="width: 130px; height: 130px; border-radius: 50%; border: 4px solid var(--bg-card); display: block;">
                         {% endif %}
                     </div>
                     <div style="position: absolute; bottom: 5px; right: 5px; background: var(--bg-card); color: var(--primary); width: 35px; height: 35px; border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);">
@@ -168,6 +172,28 @@
                 <form action="{{ url_for('update_profile') }}" method="POST" enctype="multipart/form-data">
                     <input type="file" id="profile_image_input" name="profile_image" accept="image/*" onchange="this.form.submit();">
                     
+                    <div style="margin-bottom: 2rem;">
+                        <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1rem; text-transform: uppercase; letter-spacing: 1px;">Quick Identity Selection</p>
+                        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.75rem;">
+                            <!-- Professional Male -->
+                            <div onclick="setAvatar('avataaars/svg?seed=Felix')" style="cursor: pointer; border: 2px solid var(--border-glass); border-radius: 12px; padding: 4px; transition: all 0.3s; background: rgba(255,255,255,0.02);" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-glass)'">
+                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" style="width: 100%; border-radius: 8px;">
+                                <p style="font-size: 0.6rem; text-align: center; margin-top: 4px; color: var(--text-muted);">Male 1</p>
+                            </div>
+                            <!-- Professional Female -->
+                            <div onclick="setAvatar('avataaars/svg?seed=Aria')" style="cursor: pointer; border: 2px solid var(--border-glass); border-radius: 12px; padding: 4px; transition: all 0.3s; background: rgba(255,255,255,0.02);" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-glass)'">
+                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Aria" style="width: 100%; border-radius: 8px;">
+                                <p style="font-size: 0.6rem; text-align: center; margin-top: 4px; color: var(--text-muted);">Female 1</p>
+                            </div>
+                            <!-- Casual Style -->
+                            <div onclick="setAvatar('avataaars/svg?seed=Max')" style="cursor: pointer; border: 2px solid var(--border-glass); border-radius: 12px; padding: 4px; transition: all 0.3s; background: rgba(255,255,255,0.02);" onmouseover="this.style.borderColor='var(--primary)'" onmouseout="this.style.borderColor='var(--border-glass)'">
+                                <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Max" style="width: 100%; border-radius: 8px;">
+                                <p style="font-size: 0.6rem; text-align: center; margin-top: 4px; color: var(--text-muted);">Casual</p>
+                            </div>
+                        </div>
+                        <input type="hidden" name="chosen_avatar" id="chosen_avatar_input">
+                    </div>
+
                     <div class="premium-input-group">
                         <input type="text" name="phone" value="{{ current_user.phone }}" class="premium-input" placeholder="WhatsApp Number" required>
                         <i data-lucide="smartphone" class="premium-icon"></i>
@@ -269,4 +295,13 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function setAvatar(style) {
+        document.getElementById('chosen_avatar_input').value = style;
+        document.querySelector('form[action="{{ url_for('update_profile') }}"]').submit();
+    }
+</script>
 {% endblock %}

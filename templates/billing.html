@@ -6,14 +6,18 @@
 <div class="billing-grid animate-fade">
     <div class="card">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
-            <div style="display: flex; align-items: center; gap: 1rem;">
-                <h2>Invoice Items</h2>
+            <h2 data-i18n="billing">New Invoice</h2>
+            <div style="display: flex; gap: 1rem;">
+                <button class="btn btn-outline" onclick="window.location.reload()" title="Clear Form">
+                    <i data-lucide="refresh-cw"></i>
+                    <span>Reset</span>
+                </button>
+                <button class="btn btn-outline" id="add-item-btn" title="Alt+A">
+                    <i data-lucide="plus"></i>
+                    <span data-i18n="add_item">Add Custom Item</span>
+                    <kbd style="font-size: 0.65rem; padding: 0.1rem 0.4rem; background: rgba(255,255,255,0.1); border-radius: 4px; margin-left: 0.25rem;">Alt+A</kbd>
+                </button>
             </div>
-            <button class="btn btn-outline" id="add-item-btn" title="Alt+A">
-                <i data-lucide="plus"></i>
-                <span>Add Custom Item</span>
-                <kbd style="font-size: 0.65rem; padding: 0.1rem 0.4rem; background: rgba(255,255,255,0.1); border-radius: 4px; margin-left: 0.25rem;">Alt+A</kbd>
-            </button>
         </div>
 
         <!-- ULTRA UX: Global Barcode Scanner Search Bar -->
@@ -35,6 +39,7 @@
         <div id="items-container">
             <!-- Header for items -->
             <div class="item-row" style="font-weight: 700; color: var(--text-muted); border-bottom: 1px solid var(--border-glass); padding-bottom: 0.5rem; margin-bottom: 1rem;">
+                <div style="width: 40px;">Image</div>
                 <div>Product</div>
                 <div>Price (₹)</div>
                 <div>Qty</div>
@@ -99,8 +104,8 @@
             </div>
         </div>
 
-        <div class="form-group" style="margin-top: 2rem;">
-            <label>Payment Method</label>
+        <div class="form-group">
+            <label data-i18n="payment_method">Payment Method</label>
             <select id="payment-method">
                 <option value="Cash">Cash</option>
                 <option value="UPI">UPI / GPay / PhonePe</option>
@@ -112,8 +117,8 @@
         </div>
 
         <button class="btn btn-primary" id="save-invoice-btn" style="width: 100%; justify-content: center; margin-top: 2rem; padding: 1rem;">
-            <i data-lucide="check-circle-2"></i>
-            <span>Complete & Save</span>
+            <i data-lucide="printer"></i>
+            <span data-i18n="save_print">Save & Print Invoice</span>
         </button>
     </div>
 </div>
@@ -178,7 +183,7 @@
     </div>
 </div>
 
-    <div id="products-data" style="display: none;" data-products='[{% for p in products %}{"id": {{ p.id }}, "name": "{{ p.name }}", "price": {{ p.price }}, "stock": {{ p.stock }}, "barcode": "{{ p.barcode or "" }}"}{% if not loop.last %},{% endif %}{% endfor %}]'></div>
+    <div id="products-data" style="display: none;" data-products='[{% for p in products %}{"id": {{ p.id }}, "name": "{{ p.name }}", "price": {{ p.price }}, "stock": {{ p.stock }}, "barcode": "{{ p.barcode or "" }}", "image_url": "{{ p.image_url or "" }}"}{% if not loop.last %},{% endif %}{% endfor %}]'></div>
 
 {% endblock %}
 
@@ -198,6 +203,9 @@
         row.id = rowId;
         
         row.innerHTML = `
+            <div>
+                <img class="row-image" src="https://api.dicebear.com/7.x/shapes/svg?seed=new" style="width: 40px; height: 40px; border-radius: 6px; object-fit: cover; border: 1px solid var(--border-glass); background: white;">
+            </div>
             <div>
                 <select class="product-select" onchange="updateRowPrice('${rowId}')" required>
                     <option value="">Select Product...</option>
@@ -235,8 +243,11 @@
         
         if (product) {
             row.querySelector('.price-input').value = product.price;
+            const imgEl = row.querySelector('.row-image');
+            imgEl.src = product.image_url ? `/static/${product.image_url}` : `https://api.dicebear.com/7.x/shapes/svg?seed=${product.name}`;
         } else {
             row.querySelector('.price-input').value = 0;
+            row.querySelector('.row-image').src = `https://api.dicebear.com/7.x/shapes/svg?seed=new`;
         }
         updateTotals();
     }
@@ -490,6 +501,9 @@
                 const newRow = container.lastElementChild;
                 newRow.querySelector('.product-select').value = matchedProduct.id;
                 newRow.querySelector('.price-input').value = matchedProduct.price;
+                const imgEl = newRow.querySelector('.row-image');
+                imgEl.src = matchedProduct.image_url ? `/static/${matchedProduct.image_url}` : `https://api.dicebear.com/7.x/shapes/svg?seed=${matchedProduct.name}`;
+
             }
             
             updateTotals();

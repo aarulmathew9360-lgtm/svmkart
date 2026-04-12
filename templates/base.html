@@ -16,21 +16,21 @@
         <div class="logo">SVMKART</div>
         <ul class="nav-links">
             <li>
-                <a href="{{ url_for('dashboard') }}" class="{% if request.endpoint == 'dashboard' %}active{% endif %}" title="Dashboard [Alt+D]">
+                <a href="{{ url_for('dashboard') }}" class="{% if request.endpoint == 'dashboard' or request.endpoint == 'index' %}active{% endif %}" title="Dashboard [Alt+D]">
                     <i data-lucide="layout-dashboard"></i>
-                    <span>Dashboard <small style="opacity:0.5; font-size: 0.6rem; float: right; margin-top:2px;">Alt+D</small></span>
+                    <span data-i18n="dashboard">Dashboard</span> <small style="opacity:0.5; font-size: 0.6rem; float: right; margin-top:2px;">Alt+D</small>
                 </a>
             </li>
             <li>
-                <a href="{{ url_for('billing') }}" class="{% if request.endpoint == 'billing' %}active{% endif %}" title="New Bill [Alt+N]">
-                    <i data-lucide="shopping-cart"></i>
-                    <span>New Bill <small style="opacity:0.5; font-size: 0.6rem; float: right; margin-top:2px;">Alt+N</small></span>
+                <a href="{{ url_for('billing') }}" class="{% if request.endpoint == 'billing' %}active{% endif %}" title="Billing [Alt+B]">
+                    <i data-lucide="calculator"></i>
+                    <span data-i18n="billing">New Bill</span> <small style="opacity:0.5; font-size: 0.6rem; float: right; margin-top:2px;">Alt+B</small>
                 </a>
             </li>
             <li>
                 <a href="{{ url_for('products') }}" class="{% if request.endpoint == 'products' %}active{% endif %}" title="Products [Alt+P]">
                     <i data-lucide="package"></i>
-                    <span>Products <small style="opacity:0.5; font-size: 0.6rem; float: right; margin-top:2px;">Alt+P</small></span>
+                    <span data-i18n="products">Products</span> <small style="opacity:0.5; font-size: 0.6rem; float: right; margin-top:2px;">Alt+P</small>
                 </a>
             </li>
             {% if current_user.role == 'admin' %}
@@ -44,31 +44,31 @@
             <li>
                 <a href="{{ url_for('suppliers') }}" class="{% if request.endpoint == 'suppliers' %}active{% endif %}">
                     <i data-lucide="truck"></i>
-                    <span>Suppliers</span>
+                    <span data-i18n="suppliers">Suppliers</span>
                 </a>
             </li>
             <li>
                 <a href="{{ url_for('inward') }}" class="{% if request.endpoint == 'inward' %}active{% endif %}">
                     <i data-lucide="package-plus"></i>
-                    <span>Inward Stock</span>
+                    <span data-i18n="inward">Inward Stock</span>
                 </a>
             </li>
             <li>
                 <a href="{{ url_for('customers') }}" class="{% if request.endpoint == 'customers' %}active{% endif %}">
                     <i data-lucide="users"></i>
-                    <span>Customers</span>
+                    <span data-i18n="customers">Customers</span>
                 </a>
             </li>
             <li>
                 <a href="{{ url_for('credit_book') }}" class="{% if request.endpoint == 'credit_book' %}active{% endif %}">
                     <i data-lucide="book-open"></i>
-                    <span>Credit Book (Kadaa)</span>
+                    <span data-i18n="credit_book">Credit Book (Kadaa)</span>
                 </a>
             </li>
             <li>
                 <a href="{{ url_for('invoices') }}" class="{% if request.endpoint == 'invoices' %}active{% endif %}" title="Invoices [Alt+I]">
                     <i data-lucide="file-text"></i>
-                    <span>Invoices <small style="opacity:0.5; font-size: 0.6rem; float: right; margin-top:2px;">Alt+I</small></span>
+                    <span data-i18n="invoices">Invoices</span> <small style="opacity:0.5; font-size: 0.6rem; float: right; margin-top:2px;">Alt+I</small>
                 </a>
             </li>
             {% if current_user.role == 'admin' %}
@@ -88,7 +88,7 @@
             <li>
                 <a href="{{ url_for('attendance_page') }}" class="{% if request.endpoint == 'attendance_page' %}active{% endif %}" title="View Attendance">
                     <i data-lucide="clock"></i>
-                    <span>Attendance</span>
+                    <span data-i18n="attendance">Attendance</span>
                 </a>
             </li>
             {% if current_user.role == 'admin' %}
@@ -108,27 +108,31 @@
             <li>
                 <a href="{{ url_for('settings') }}" class="{% if request.endpoint == 'settings' %}active{% endif %}">
                     <i data-lucide="settings"></i>
-                    <span>System Settings</span>
+                    <span data-i18n="settings">System Settings</span>
                 </a>
             </li>
             <li>
                 <a href="javascript:void(0)" onclick="document.getElementById('payroll-modal').style.display='flex'">
                     <i data-lucide="banknote"></i>
-                    <span>Run Payroll</span>
+                    <span data-i18n="payroll">Run Payroll</span>
                 </a>
             </li>
             {% endif %}
         </ul>
         <div style="padding: 1rem; border-top: 1px solid var(--border-glass);">
-            <button id="theme-toggle" class="btn btn-outline" style="width: 100%; justify-content: center;">
+            <button id="theme-toggle" class="btn btn-outline" style="width: 100%; justify-content: center; margin-bottom: 0.5rem;">
                 <i data-lucide="moon" id="theme-icon"></i>
-                <span id="theme-text">Dark Mode</span>
+                <span id="theme-text" data-i18n="theme_dark">Dark Mode</span>
+            </button>
+            <button id="lang-toggle" class="btn btn-outline" style="width: 100%; justify-content: center; border-color: var(--accent); color: var(--accent);">
+                <i data-lucide="languages" style="width: 14px;"></i>
+                <span id="lang-label">தமிழ்</span>
             </button>
         </div>
         <div class="logout-btn">
             <a href="{{ url_for('logout') }}" class="btn btn-outline" style="width: 100%; justify-content: center;">
                 <i data-lucide="log-out"></i>
-                <span>Logout</span>
+                <span data-i18n="logout">Logout</span>
             </a>
         </div>
     </aside>
@@ -216,6 +220,68 @@
     {% endif %}
 
     <script>
+        // Language Support (Tamil / English)
+        const translations = {
+            'en': {
+                'dashboard': 'Dashboard',
+                'billing': 'New Bill',
+                'products': 'Products',
+                'credit_book': 'Credit Book (Kadaa)',
+                'invoices': 'Invoices',
+                'customers': 'Customers',
+                'suppliers': 'Suppliers',
+                'inward': 'Inward Stock',
+                'attendance': 'Attendance',
+                'payroll': 'Run Payroll',
+                'settings': 'System Settings',
+                'logout': 'Logout',
+                'lang_label': 'தமிழ்'
+            },
+            'ta': {
+                'dashboard': 'டேஷ்போர்டு',
+                'billing': 'புதிய பில்',
+                'products': 'பொருட்கள்',
+                'credit_book': 'கடாவ் புத்தகம்',
+                'invoices': 'பில்கள்',
+                'customers': 'வாடிக்கையாளர்கள்',
+                'suppliers': 'சப்ளையர்கள்',
+                'inward': 'சரக்கு வரத்து',
+                'attendance': 'வருகைப் பதிவு',
+                'payroll': 'சம்பள விவரம்',
+                'settings': 'அமைப்புகள்',
+                'logout': 'வெளியேறு',
+                'lang_label': 'English',
+                // New additions
+                'theme_dark': 'இருள் மோடு (Dark)',
+                'theme_light': 'வெளிச்ச மோடு (Light)',
+                'search_hint': 'தேடுக...',
+                'add_new': 'புதியது சேர்',
+                'total_amount': 'மொத்தத் தொகை',
+                'save_print': 'சேமி & பிரிண்ட்',
+                'scan_barcode': 'பார்கோடு ஸ்கேன்',
+                'payment_method': 'பணப் பரிமாற்றம்'
+            }
+        };
+
+        function setLanguage(lang) {
+            localStorage.setItem('svmkart_lang', lang);
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                if (translations[lang][key]) {
+                    el.innerText = translations[lang][key];
+                }
+            });
+            document.getElementById('lang-label').innerText = translations[lang]['lang_label'];
+        }
+
+        const currentLang = localStorage.getItem('svmkart_lang') || 'en';
+        setLanguage(currentLang);
+
+        document.getElementById('lang-toggle').onclick = () => {
+            const nextLang = localStorage.getItem('svmkart_lang') === 'en' ? 'ta' : 'en';
+            setLanguage(nextLang);
+        };
+
         lucide.createIcons();
 
         // Theme Switcher Logic
