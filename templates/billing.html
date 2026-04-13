@@ -138,8 +138,12 @@
                 <i data-lucide="eye"></i>
                 <span>Print Preview (A4)</span>
             </a>
-            <a id="thermal-link" href="#" class="btn btn-outline" style="justify-content: center; grid-column: span 2; border-color: var(--accent); color: var(--accent);">
-                <i data-lucide="printer"></i>
+            <a id="thermal-preview-link" href="#" target="_blank" class="btn btn-outline" style="justify-content: center; grid-column: span 2; border-color: var(--accent); color: var(--accent);">
+                <i data-lucide="eye"></i>
+                <span>Thermal Receipt (Print Preview)</span>
+            </a>
+            <a id="thermal-link" href="#" class="btn btn-outline" style="justify-content: center; grid-column: span 2; border-color: var(--accent); color: var(--accent); opacity: 0.6;">
+                <i data-lucide="download"></i>
                 <span>Thermal Receipt (Download)</span>
             </a>
             <a id="whatsapp-link" href="#" target="_blank" class="btn btn-outline" style="justify-content: center; grid-column: span 2; border-color: #25D366; color: #25D366; display: none;">
@@ -346,6 +350,7 @@
                 document.getElementById('download-link').href = '/invoice/pdf/' + result.invoice_id;
                 document.getElementById('print-view-link').href = '/invoice/view/pdf/' + result.invoice_id;
                 document.getElementById('thermal-link').href = '/invoice/thermal/' + result.invoice_id;
+                document.getElementById('thermal-preview-link').href = '/invoice/view/thermal/' + result.invoice_id;
                 
                 // WhatsApp Integration
                 if (result.customer_phone) {

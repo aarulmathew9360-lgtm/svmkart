@@ -48,7 +48,10 @@
                                 <i data-lucide="download" style="width: 16px;"></i>
                             </a>
                             <a href="{{ url_for('download_thermal', invoice_id=invoice.id) }}" class="btn" style="padding: 0.4rem; border-radius: 0.4rem; background: var(--accent); color: white;" title="Download Thermal Receipt">
-                                <i data-lucide="printer" style="width: 16px;"></i>
+                                <i data-lucide="download" style="width: 16px;"></i>
+                            </a>
+                            <a href="{{ url_for('invoice_thermal_view', invoice_id=invoice.id) }}" target="_blank" class="btn btn-outline" style="padding: 0.4rem; border-radius: 0.4rem; border-color: var(--accent); color: var(--accent);" title="Print Preview (Thermal)">
+                                <i data-lucide="eye" style="width: 16px;"></i>
                             </a>
                             <div style="width: 1px; background: var(--border-glass); margin: 0 0.25rem;"></div>
                             <!-- View Routes (HTML Print Preview) -->
