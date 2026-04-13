@@ -8,3 +8,4 @@ gunicorn
 pytz
 werkzeug
 python-dotenv
+google-generativeai

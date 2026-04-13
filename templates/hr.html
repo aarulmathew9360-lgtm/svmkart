@@ -103,10 +103,12 @@
                             </div>
                             {% else %}
                             <div style="display: flex; align-items: center; gap: 0.75rem;">
-                                <span style="color: var(--success);" title="Paid Successfully"><i data-lucide="check-circle" style="width: 20px; height: 20px;"></i></span>
+                                <a href="{{ url_for('view_payslip', payroll_id=pay.id) }}" target="_blank" class="btn" style="background: rgba(59, 130, 246, 0.1); color: var(--primary); padding: 0.4rem 0.8rem; font-size: 0.85rem;" title="View Professional Payslip">
+                                    <i data-lucide="eye" style="width: 14px;"></i> View
+                                </a>
                                 {% if pay.user.phone %}
-                                <a href="https://wa.me/{{ pay.user.phone | wa_format }}?text=Hello%20{{ pay.user.username }},%0A%F0%9F%92%B0%20Your%20salary%20for%20*{{ pay.month }}/{{ pay.year }}*%20of%20*Rs.{{ "%.2f"|format(pay.final_pay) }}*%20has%20been%20Paid%20on%20{{ pay.payment_date.strftime('%d %b') }}.%0A%0A_Sent%20from%20SVMKART%20HR_" target="_blank" class="btn" style="background: rgba(37, 211, 102, 0.1); color: #25D366; padding: 0.4rem 0.8rem; font-size: 0.85rem;" title="Send Digital Payslip">
-                                    <i data-lucide="send" style="width: 14px;"></i> Payslip
+                                <a href="https://wa.me/{{ pay.user.phone | wa_format }}?text=Hello%20{{ pay.user.username }},%0A%F0%9F%92%B0%20Your%20salary%20for%20*{{ pay.month }}/{{ pay.year }}*%20of%20*Rs.{{ "%.2f"|format(pay.final_pay) }}*%20has%20been%20Paid%20on%20{{ pay.payment_date.strftime('%d %b') }}.%0A%0A_Sent%20from%20SVMKART%20HR_" target="_blank" class="btn" style="background: rgba(37, 211, 102, 0.1); color: #25D366; padding: 0.4rem 0.8rem; font-size: 0.85rem;" title="Send Digital Payslip to WhatsApp">
+                                    <i data-lucide="send" style="width: 14px;"></i> WhatsApp
                                 </a>
                                 {% endif %}
                             </div>

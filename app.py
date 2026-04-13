@@ -17,6 +17,10 @@ import tempfile
 from fpdf import FPDF
 from functools import wraps
 from io import BytesIO
+import google.generativeai as genai
+
+# Configure AI
+genai.configure(api_key=os.environ.get("GEMINI_API_KEY", ""))
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'svmkart-secret-key-12345')
@@ -1023,7 +1027,80 @@ def pay_staff(payroll_id):
     db.session.commit()
     flash(f'Payment of ₹{payroll.final_pay} marked as completed.', 'success')
     return redirect(url_for('settings'))
+
+@app.route('/hr/payslip/<int:payroll_id>')
+@login_required
+def view_payslip(payroll_id):
+    payroll = Payroll.query.get_or_404(payroll_id)
+    # Security check: only admins or the owner can view
+    if current_user.role != 'admin' and current_user.id != payroll.user_id:
+        flash('Access denied!', 'danger')
+        return redirect(url_for('dashboard'))
+        
+    settings = Settings.query.first()
     
+    # Calculate attendance for that specific month/year
+    start_date = datetime(payroll.year, payroll.month, 1)
+    if payroll.month == 12:
+        end_date = datetime(payroll.year + 1, 1, 1)
+    else:
+        end_date = datetime(payroll.year, payroll.month + 1, 1)
+        
+    attendance_count = Attendance.query.filter(
+        Attendance.user_id == payroll.user_id,
+        Attendance.date >= start_date.date(),
+        Attendance.date < end_date.date(),
+        Attendance.status == 'present'
+    ).count()
+    
+    return render_template('payslip.html', payroll=payroll, settings=settings, attendance_count=attendance_count)
+    
+@app.route('/ai/chat', methods=['POST'])
+@login_required
+def ai_chat():
+    user_message = request.json.get('message', '')
+    if not user_message:
+        return jsonify({'reply': "I didn't catch that. Can you repeat?"})
+
+    try:
+        # Check if API KEY is set
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            return jsonify({'reply': "To enable AI, please set your GEMINI_API_KEY in the .env file. I am currently in Demo Mode."})
+
+        # 1. Gather Context for the AI
+        top_products = Product.query.order_by(Product.stock.asc()).limit(5).all()
+        low_stock_list = [f"{p.name} ({p.stock} left)" for p in top_products if p.stock < 10]
+        
+        recent_sales = Invoice.query.order_by(Invoice.date.desc()).limit(5).all()
+        total_sales_today = db.session.query(db.func.sum(Invoice.final_amount)).filter(db.func.date(Invoice.date) == datetime.now().date()).scalar() or 0
+        
+        settings = Settings.query.first()
+        store_name = settings.store_name if settings else "SVMKART"
+
+        # Construct System Prompt with Context
+        context = f"""
+        You are the SVMKART Shop Assistant for '{store_name}'.
+        Current Shop Status:
+        - Total Sales Today: Rs.{total_sales_today:.2f}
+        - Low Stock Items: {', '.join(low_stock_list) if low_stock_list else 'All items in good stock.'}
+        - Last 5 Sales: {', '.join([f'Inv #{i.invoice_no}: Rs.{i.final_amount}' for i in recent_sales])}
+        
+        Rules:
+        1. Keep replies professional, short, and helpful.
+        2. Use Tamil if the user asks in Tamil or mixed Tamil/English.
+        3. Only answer questions related to the shop, inventory, sales, or workers.
+        """
+
+        model = genai.GenerativeModel('models/gemini-flash-latest')
+        response = model.generate_content(f"{context}\n\nUser Question: {user_message}")
+        
+        return jsonify({'reply': response.text})
+
+    except Exception as e:
+        print(f"AI ERROR: {str(e)}")
+        return jsonify({'reply': "Manni-kavum (Sorry), I am having some technical issues. Let's try again in a bit."})
+
 @app.route('/settings/reset', methods=['POST'])
 @login_required
 @admin_required

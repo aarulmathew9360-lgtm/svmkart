@@ -163,6 +163,33 @@
         {% block content %}{% endblock %}
     </main>
 
+    <!-- AI Smart Assistant -->
+    <div class="ai-chat-bubble" onclick="toggleAIChat()" title="AI Assistant [Alt+A]">
+        <i data-lucide="sparkles"></i>
+    </div>
+
+    <div class="ai-chat-window" id="aiChatWindow">
+        <div class="ai-chat-header">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div style="width: 8px; height: 8px; background: #10b981; border-radius: 50%; box-shadow: 0 0 10px #10b981;"></div>
+                <span style="font-weight: 700; font-size: 0.95rem;">SVMKART AI Assistant</span>
+            </div>
+            <i data-lucide="x" style="cursor: pointer; width: 20px; color: var(--text-muted);" onclick="toggleAIChat()"></i>
+        </div>
+        <div class="ai-messages" id="aiMessages">
+            <div class="message ai">
+                Vanakkam! I am your SVMKART Smart Assistant. Ask me anything about your shop. (Shortcut: Alt+A)
+            </div>
+        </div>
+        <div id="typingIndicator" class="typing-indicator" style="padding: 0 1.25rem;">AI is thinking...</div>
+        <div class="ai-input-area">
+            <input type="text" id="aiInput" placeholder="Ask about sales, stock..." onkeypress="if(event.key === 'Enter') sendAIMessage()">
+            <button class="btn btn-primary" style="padding: 0.5rem; border-radius: 0.75rem;" onclick="sendAIMessage()">
+                <i data-lucide="send" style="width: 18px;"></i>
+            </button>
+        </div>
+    </div>
+
     {% if current_user.role == 'admin' %}
     <!-- Payroll Modal -->
     <div id="payroll-modal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); z-index: 1002; align-items: center; justify-content: center; padding: 2rem;">
@@ -235,7 +262,9 @@
                 'payroll': 'Run Payroll',
                 'settings': 'System Settings',
                 'logout': 'Logout',
-                'lang_label': 'தமிழ்'
+                'lang_label': 'தமிழ்',
+                'theme_dark': 'Dark Mode',
+                'theme_light': 'Light Mode'
             },
             'ta': {
                 'dashboard': 'டேஷ்போர்டு',
@@ -251,7 +280,6 @@
                 'settings': 'அமைப்புகள்',
                 'logout': 'வெளியேறு',
                 'lang_label': 'English',
-                // New additions
                 'theme_dark': 'இருள் மோடு (Dark)',
                 'theme_light': 'வெளிச்ச மோடு (Light)',
                 'search_hint': 'தேடுக...',
@@ -267,7 +295,7 @@
             localStorage.setItem('svmkart_lang', lang);
             document.querySelectorAll('[data-i18n]').forEach(el => {
                 const key = el.getAttribute('data-i18n');
-                if (translations[lang][key]) {
+                if (translations[lang] && translations[lang][key]) {
                     el.innerText = translations[lang][key];
                 }
             });
@@ -290,7 +318,6 @@
         const themeText = document.getElementById('theme-text');
         const body = document.body;
 
-        // Check for saved theme
         if (localStorage.getItem('theme') === 'light') {
             body.classList.add('light-mode');
             updateThemeUI(true);
@@ -305,34 +332,70 @@
         function updateThemeUI(isLight) {
             themeIcon.setAttribute('data-lucide', isLight ? 'sun' : 'moon');
             themeText.innerText = isLight ? 'Light Mode' : 'Dark Mode';
-            lucide.createIcons(); // Refresh icons
+            lucide.createIcons();
         }
 
-        // --- Keyboard Shortcuts (Power User Features) ---
-        document.addEventListener('keydown', function(event) {
-            // Ignore if user is typing in an input field
-            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' || event.target.tagName === 'SELECT') {
-                return;
+        // --- AI Chat Logic ---
+        function toggleAIChat() {
+            const win = document.getElementById('aiChatWindow');
+            const isVisible = win.style.display === 'flex';
+            win.style.display = isVisible ? 'none' : 'flex';
+            if (!isVisible) {
+                document.getElementById('aiInput').focus();
             }
+        }
+
+        async function sendAIMessage() {
+            const input = document.getElementById('aiInput');
+            const container = document.getElementById('aiMessages');
+            const indicator = document.getElementById('typingIndicator');
+            const text = input.value.trim();
             
+            if (!text) return;
+
+            const userMsg = document.createElement('div');
+            userMsg.className = 'message user';
+            userMsg.innerText = text;
+            container.appendChild(userMsg);
+            input.value = '';
+            container.scrollTop = container.scrollHeight;
+
+            indicator.style.display = 'block';
+
+            try {
+                const response = await fetch('/ai/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message: text })
+                });
+                const data = await response.json();
+                
+                const aiMsg = document.createElement('div');
+                aiMsg.className = 'message ai';
+                aiMsg.innerText = data.reply || "I am having trouble connecting right now. Please try again.";
+                container.appendChild(aiMsg);
+            } catch (error) {
+                const errorMsg = document.createElement('div');
+                errorMsg.className = 'message ai';
+                errorMsg.innerText = "Error: Could not reach AI server.";
+                container.appendChild(errorMsg);
+            } finally {
+                indicator.style.display = 'none';
+                container.scrollTop = container.scrollHeight;
+                lucide.createIcons();
+            }
+        }
+
+        // Shortcuts
+        document.addEventListener('keydown', function(event) {
+            if (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' || event.target.tagName === 'SELECT') return;
             if (event.altKey) {
                 switch(event.key.toLowerCase()) {
-                    case 'n': // Alt + N: New Bill
-                        event.preventDefault();
-                        window.location.href = "{{ url_for('billing') }}";
-                        break;
-                    case 'p': // Alt + P: Products
-                        event.preventDefault();
-                        window.location.href = "{{ url_for('products') }}";
-                        break;
-                    case 'i': // Alt + I: Invoices
-                        event.preventDefault();
-                        window.location.href = "{{ url_for('invoices') }}";
-                        break;
-                    case 'd': // Alt + D: Dashboard
-                        event.preventDefault();
-                        window.location.href = "{{ url_for('dashboard') }}";
-                        break;
+                    case 'n': window.location.href = "{{ url_for('billing') }}"; break;
+                    case 'p': window.location.href = "{{ url_for('products') }}"; break;
+                    case 'i': window.location.href = "{{ url_for('invoices') }}"; break;
+                    case 'd': window.location.href = "{{ url_for('dashboard') }}"; break;
+                    case 'a': toggleAIChat(); break;
                 }
             }
         });

@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salary Slip - {{ payroll.user.username }} - {{ payroll.month }}/{{ payroll.year }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --success: #10b981;
+            --danger: #ef4444;
+            --text-base: #1f2937;
+            --text-muted: #6b7280;
+            --bg-card: #ffffff;
+            --border: #e5e7eb;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #f3f4f6;
+            color: var(--text-base);
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+        }
+
+        .payslip-container {
+            width: 100%;
+            max-width: 800px;
+            background: var(--bg-card);
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+            padding: 3rem;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-45deg);
+            font-size: 8rem;
+            color: rgba(16, 185, 129, 0.05);
+            font-weight: 900;
+            pointer-events: none;
+            z-index: 0;
+            white-space: nowrap;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid var(--border);
+            padding-bottom: 2rem;
+            margin-bottom: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .store-info h1 {
+            margin: 0;
+            font-size: 1.5rem;
+            color: var(--primary);
+            letter-spacing: -0.025em;
+        }
+
+        .store-info p {
+            margin: 0.25rem 0;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+        }
+
+        .payslip-title {
+            text-align: right;
+        }
+
+        .payslip-title h2 {
+            margin: 0;
+            font-size: 1.25rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-base);
+        }
+
+        .staff-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2.5rem;
+            background: #f9fafb;
+            padding: 1.5rem;
+            border-radius: 12px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .detail-group label {
+            display: block;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+            font-weight: 600;
+        }
+
+        .detail-group span {
+            font-weight: 700;
+            font-size: 1rem;
+        }
+
+        .salary-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 2.5rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .salary-table th {
+            text-align: left;
+            padding: 1rem;
+            background: #f3f4f6;
+            font-size: 0.875rem;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .salary-table td {
+            padding: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .salary-table .amount {
+            text-align: right;
+            font-weight: 600;
+        }
+
+        .salary-table .earnings { color: var(--success); }
+        .salary-table .deductions { color: var(--danger); }
+
+        .total-section {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 3rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .net-pay-card {
+            background: var(--primary);
+            color: white;
+            padding: 1.5rem 2.5rem;
+            border-radius: 12px;
+            text-align: right;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
+        }
+
+        .net-pay-card label {
+            display: block;
+            font-size: 0.875rem;
+            opacity: 0.9;
+            margin-bottom: 0.5rem;
+        }
+
+        .net-pay-card span {
+            font-size: 2rem;
+            font-weight: 800;
+        }
+
+        .footer {
+            border-top: 1px dashed var(--border);
+            padding-top: 2rem;
+            display: flex;
+            justify-content: space-between;
+            position: relative;
+            z-index: 1;
+        }
+
+        .signature-box {
+            text-align: center;
+            width: 200px;
+        }
+
+        .signature-line {
+            border-top: 1px solid var(--text-base);
+            margin-top: 3rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .btns-container {
+            margin-top: 2rem;
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            text-decoration: none;
+            border: none;
+        }
+
+        .btn-print { background: var(--primary); color: white; }
+        .btn-close { background: white; color: var(--text-base); border: 1px solid var(--border); }
+
+        @media print {
+            body { background: white; padding: 0; }
+            .btns-container { display: none; }
+            .payslip-container { box-shadow: none; border: none; padding: 0; width: 100%; max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    <div class="payslip-container">
+        <div class="watermark">{% if payroll.is_paid %}PAID{% else %}PENDING{% endif %}</div>
+        
+        <div class="header">
+            <div class="store-info">
+                <h1>{{ settings.store_name if settings else 'SVMKART' }}</h1>
+                <p>{{ settings.store_address if settings else '' }}</p>
+                <p>Phone: {{ settings.store_contact if settings else '' }}</p>
+                <p>Email: {{ settings.store_email if settings else '' }}</p>
+            </div>
+            <div class="payslip-title">
+                <h2>Payslip</h2>
+                <p style="color: var(--text-muted);">{{ payroll.month }}/{{ payroll.year }}</p>
+            </div>
+        </div>
+
+        <div class="staff-details">
+            <div class="detail-group">
+                <label>Employee Name</label>
+                <span>{{ payroll.user.username }}</span>
+            </div>
+            <div class="detail-group">
+                <label>Employee ID</label>
+                <span>SVM-EMP-{{ payroll.user.id }}</span>
+            </div>
+            <div class="detail-group">
+                <label>Attendance (Present)</label>
+                <span>{{ attendance_count }} Days</span>
+            </div>
+            <div class="detail-group">
+                <label>Payment Status</label>
+                <span style="color: {% if payroll.is_paid %}var(--success){% else %}var(--danger){% endif %};">
+                    {% if payroll.is_paid %}Paid on {{ payroll.payment_date.strftime('%d %B %Y') }}{% else %}Payment Pending{% endif %}
+                </span>
+            </div>
+        </div>
+
+        <table class="salary-table">
+            <thead>
+                <tr>
+                    <th>Description</th>
+                    <th class="amount">Type</th>
+                    <th class="amount">Amount (₹)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="font-weight: 500;">Basic Salary</td>
+                    <td class="amount earnings">Earnings</td>
+                    <td class="amount">{{ "%.2f"|format(payroll.base_salary) }}</td>
+                </tr>
+                {% if payroll.bonus > 0 %}
+                <tr>
+                    <td style="font-weight: 500;">Performance Bonus</td>
+                    <td class="amount earnings">Earnings</td>
+                    <td class="amount">+{{ "%.2f"|format(payroll.bonus) }}</td>
+                </tr>
+                {% endif %}
+                {% if payroll.deductions > 0 %}
+                <tr>
+                    <td style="font-weight: 500;">Deductions / Penalties</td>
+                    <td class="amount deductions">Deduction</td>
+                    <td class="amount">-{{ "%.2f"|format(payroll.deductions) }}</td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+
+        <div class="total-section">
+            <div class="net-pay-card">
+                <label>NET SALARY PAYABLE</label>
+                <span>₹{{ "%.2f"|format(payroll.final_pay) }}</span>
+            </div>
+        </div>
+
+        <div class="footer">
+            <div class="signature-box">
+                <div class="signature-line"></div>
+                <p style="font-size: 0.75rem; color: var(--text-muted);">Employer Signature</p>
+            </div>
+            <div class="signature-box">
+                <div class="signature-line"></div>
+                <p style="font-size: 0.75rem; color: var(--text-muted);">Employee Signature</p>
+            </div>
+        </div>
+        
+        <p style="text-align: center; color: var(--text-muted); font-size: 0.75rem; margin-top: 3rem; font-style: italic; position: relative; z-index: 1;">
+            This is a computer generated document and does not require a physical seal if signed above.
+        </p>
+
+        <div class="btns-container">
+            <button onclick="window.print()" class="btn btn-print">
+                <i data-lucide="printer"></i> Print Payslip
+            </button>
+            <a href="javascript:window.close()" class="btn btn-close">Close Tab</a>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+    </script>
+</body>
+</html>
