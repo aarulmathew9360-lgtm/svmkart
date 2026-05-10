@@ -220,6 +220,77 @@
             .btns-container { display: none; }
             .payslip-container { box-shadow: none; border: none; padding: 0; width: 100%; max-width: 100%; }
         }
+
+        @media (max-width: 640px) {
+            body {
+                padding: 1rem;
+            }
+
+            .payslip-container {
+                padding: 1.5rem;
+                border-radius: 12px;
+            }
+
+            .header {
+                flex-direction: column;
+                text-align: center;
+                gap: 1.5rem;
+            }
+
+            .payslip-title {
+                text-align: center;
+            }
+
+            .staff-details {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+                padding: 1rem;
+            }
+
+            .salary-table th, .salary-table td {
+                padding: 0.75rem 0.5rem;
+                font-size: 0.8rem;
+            }
+
+            .total-section {
+                justify-content: center;
+            }
+
+            .net-pay-card {
+                padding: 1.25rem;
+                width: 100%;
+                box-sizing: border-box;
+                text-align: center;
+            }
+
+            .net-pay-card span {
+                font-size: 1.5rem;
+            }
+
+            .footer {
+                flex-direction: column;
+                align-items: center;
+                gap: 2rem;
+            }
+
+            .signature-box {
+                width: 100%;
+                max-width: 250px;
+            }
+
+            .watermark {
+                font-size: 4rem;
+            }
+
+            .btns-container {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
     </style>
 </head>
 <body>
@@ -260,36 +331,38 @@
             </div>
         </div>
 
-        <table class="salary-table">
-            <thead>
-                <tr>
-                    <th>Description</th>
-                    <th class="amount">Type</th>
-                    <th class="amount">Amount (₹)</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td style="font-weight: 500;">Basic Salary</td>
-                    <td class="amount earnings">Earnings</td>
-                    <td class="amount">{{ "%.2f"|format(payroll.base_salary) }}</td>
-                </tr>
-                {% if payroll.bonus > 0 %}
-                <tr>
-                    <td style="font-weight: 500;">Performance Bonus</td>
-                    <td class="amount earnings">Earnings</td>
-                    <td class="amount">+{{ "%.2f"|format(payroll.bonus) }}</td>
-                </tr>
-                {% endif %}
-                {% if payroll.deductions > 0 %}
-                <tr>
-                    <td style="font-weight: 500;">Deductions / Penalties</td>
-                    <td class="amount deductions">Deduction</td>
-                    <td class="amount">-{{ "%.2f"|format(payroll.deductions) }}</td>
-                </tr>
-                {% endif %}
-            </tbody>
-        </table>
+        <div style="overflow-x: auto;">
+            <table class="salary-table">
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th class="amount">Type</th>
+                        <th class="amount">Amount (₹)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="font-weight: 500;">Basic Salary</td>
+                        <td class="amount earnings">Earnings</td>
+                        <td class="amount">{{ "%.2f"|format(payroll.base_salary) }}</td>
+                    </tr>
+                    {% if payroll.bonus > 0 %}
+                    <tr>
+                        <td style="font-weight: 500;">Performance Bonus</td>
+                        <td class="amount earnings">Earnings</td>
+                        <td class="amount">+{{ "%.2f"|format(payroll.bonus) }}</td>
+                    </tr>
+                    {% endif %}
+                    {% if payroll.deductions > 0 %}
+                    <tr>
+                        <td style="font-weight: 500;">Deductions / Penalties</td>
+                        <td class="amount deductions">Deduction</td>
+                        <td class="amount">-{{ "%.2f"|format(payroll.deductions) }}</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
 
         <div class="total-section">
             <div class="net-pay-card">

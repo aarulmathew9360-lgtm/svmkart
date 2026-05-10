@@ -6,7 +6,7 @@
 <div class="animate-fade">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
         <h2 style="font-size: 1.125rem; color: var(--text-muted);">Total Products: {{ products|length }}</h2>
-        <div style="display: flex; gap: 1rem;">
+        <div class="mobile-grid-actions" style="display: flex; gap: 1rem; flex-wrap: wrap;">
             <button class="btn btn-outline" onclick="window.location.href='{{ url_for('generate_missing_barcodes') }}'" title="Auto-generate for N/A items">
                 <i data-lucide="barcode"></i>
                 <span>Auto-Fill Barcodes</span>
@@ -27,7 +27,7 @@
     </div>
 
     <div class="card">
-        <div class="table-container">
+        <div class="table-wrapper">
             <table>
                 <thead>
                     <tr>

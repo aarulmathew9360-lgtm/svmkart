@@ -12,7 +12,23 @@
     {% block head %}{% endblock %}
 </head>
 <body>
-    <aside class="sidebar">
+    <div class="mobile-header">
+        <button class="menu-toggle" onclick="toggleSidebar()">
+            <i data-lucide="menu"></i>
+        </button>
+        <div style="font-weight: 800; font-size: 1.2rem; background: linear-gradient(to right, #818cf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">SVMKART</div>
+        <a href="{{ url_for('profile') }}">
+            {% if current_user.profile_image and current_user.profile_image != 'default.png' %}
+            <img src="{{ url_for('static', filename='uploads/profiles/' + current_user.profile_image) }}" alt="Avatar" style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.1);">
+            {% else %}
+            <img src="https://api.dicebear.com/7.x/initials/svg?seed={{ current_user.username }}" alt="Avatar" style="width: 35px; height: 35px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.1);">
+            {% endif %}
+        </a>
+    </div>
+
+    <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+    <aside class="sidebar" id="sidebar">
         <div class="logo">SVMKART</div>
         <ul class="nav-links">
             <li>
@@ -163,6 +179,25 @@
         {% block content %}{% endblock %}
     </main>
 
+    <nav class="mobile-nav">
+        <a href="{{ url_for('dashboard') }}" class="mobile-nav-item {% if request.endpoint == 'dashboard' %}active{% endif %}">
+            <i data-lucide="layout-dashboard"></i>
+            <span data-i18n="dashboard">Dashboard</span>
+        </a>
+        <a href="{{ url_for('billing') }}" class="mobile-nav-item {% if request.endpoint == 'billing' %}active{% endif %}">
+            <i data-lucide="calculator"></i>
+            <span data-i18n="billing">New Bill</span>
+        </a>
+        <a href="{{ url_for('products') }}" class="mobile-nav-item {% if request.endpoint == 'products' %}active{% endif %}">
+            <i data-lucide="package"></i>
+            <span data-i18n="products">Stock</span>
+        </a>
+        <a href="{{ url_for('settings') }}" class="mobile-nav-item {% if request.endpoint == 'settings' %}active{% endif %}">
+            <i data-lucide="settings"></i>
+            <span data-i18n="settings">Settings</span>
+        </a>
+    </nav>
+
     <!-- AI Smart Assistant -->
     <div class="ai-chat-bubble" onclick="toggleAIChat()" title="AI Assistant [Alt+A]">
         <i data-lucide="sparkles"></i>
@@ -247,6 +282,20 @@
     {% endif %}
 
     <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.toggle('show');
+            overlay.classList.toggle('show');
+        }
+
+        // Close sidebar on link click (mobile)
+        document.querySelectorAll('.nav-links a').forEach(link => {
+            link.addEventListener('click', () => {
+                if(window.innerWidth <= 768) toggleSidebar();
+            });
+        });
+
         // Language Support (Tamil / English)
         const translations = {
             'en': {

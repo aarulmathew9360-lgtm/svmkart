@@ -131,6 +131,31 @@ body {
     color: var(--text-main);
 }
 
+.grid-dashboard-main {
+    grid-template-columns: 2fr 1fr;
+}
+
+.chart-card-dashboard {
+    grid-column: span 1;
+}
+
+@media (min-width: 769px) {
+    .chart-card-dashboard {
+        grid-column: span 1; /* Default for 2fr 1fr grid */
+    }
+}
+
+@media (max-width: 768px) {
+    .grid-dashboard-main {
+        grid-template-columns: 1fr;
+    }
+    .mobile-hero {
+        padding: 1.5rem !important;
+        text-align: center;
+        justify-content: center !important;
+    }
+}
+
 .nav-links i {
     margin-right: 1rem;
     font-size: 1.25rem;
@@ -245,6 +270,19 @@ tr:hover td {
 .badge-danger { background: rgba(239, 68, 68, 0.1); color: var(--danger); }
 .badge-warning { background: rgba(245, 158, 11, 0.1); color: var(--warning); }
 
+.table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin-bottom: 1rem;
+    border-radius: 1rem;
+}
+
+@media (max-width: 768px) {
+    .grid-4 { grid-template-columns: 1fr 1fr; gap: 1rem; }
+    .stat-card p { font-size: 1.25rem; }
+    .stat-icon { width: 40px; height: 40px; font-size: 1.2rem; }
+}
+
 /* Forms */
 .form-group {
     margin-bottom: 1.25rem;
@@ -306,10 +344,27 @@ input:focus, select:focus {
 
 .item-row {
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr 40px;
+    grid-template-columns: 50px 2fr 1fr 1fr 1fr 40px;
     gap: 1rem;
     margin-bottom: 0.75rem;
     align-items: center;
+}
+
+@media (max-width: 768px) {
+    .item-row {
+        grid-template-columns: 1fr 1fr;
+        background: rgba(255, 255, 255, 0.03);
+        padding: 1rem;
+        border-radius: 1rem;
+        border: 1px solid var(--border-glass);
+        gap: 0.5rem;
+    }
+
+    .item-row > div:first-child { grid-column: span 2; display: flex; justify-content: center; }
+    .item-row > div:nth-child(2) { grid-column: span 2; }
+    .item-row > div:last-child { position: absolute; top: 10px; right: 10px; }
+    
+    .item-row-header { display: none !important; }
 }
 
 /* Login Page Styling */
@@ -323,8 +378,42 @@ input:focus, select:focus {
 }
 
 .login-card {
-    width: 400px;
+    width: 100%;
+    max-width: 420px;
     padding: 3rem;
+    z-index: 10;
+    position: relative;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.login-bg {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(circle at 0% 0%, #4f46e5 0%, transparent 40%),
+                radial-gradient(circle at 100% 100%, #c084fc 0%, transparent 40%),
+                #0f172a;
+    z-index: -1;
+    overflow: hidden;
+}
+
+.floating-shape {
+    position: absolute;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(79, 70, 229, 0.6), rgba(192, 132, 252, 0.6));
+    filter: blur(80px);
+    z-index: 0;
+    animation: float 20s infinite alternate cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes float {
+    0% { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(100px, 100px) scale(1.2); }
+}
+
+input:focus {
+    box-shadow: 0 0 0 4px rgba(79, 70, 229, 0.2);
+    transform: translateY(-2px);
 }
 
 /* Charts */
@@ -333,21 +422,134 @@ input:focus, select:focus {
     width: 100%;
 }
 
-@media (max-width: 1024px) {
-    .sidebar { width: 80px; }
-    .logo, .nav-links span { display: none; }
-    .main-content { margin-left: 80px; width: calc(100% - 80px); }
-    .billing-grid { grid-template-columns: 1fr; }
+/* --- Mobile UI Enhancements --- */
+.mobile-header {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: var(--bg-card);
+    backdrop-filter: var(--glass-blur);
+    border-bottom: 1px solid var(--border-glass);
+    z-index: 1001;
+    padding: 0 1.5rem;
+    align-items: center;
+    justify-content: space-between;
 }
 
-/* Micro-animations */
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+.mobile-nav {
+    display: none;
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    right: 20px;
+    height: 65px;
+    background: rgba(30, 41, 59, 0.85);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border-glass);
+    border-radius: 20px;
+    z-index: 999;
+    padding: 0 1rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    justify-content: space-around;
+    align-items: center;
 }
 
-.animate-fade {
-    animation: fadeIn 0.5s ease forwards;
+.mobile-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.7rem;
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.mobile-nav-item.active {
+    color: var(--primary);
+}
+
+.mobile-nav-item i {
+    width: 20px;
+}
+
+.menu-toggle {
+    background: transparent;
+    border: none;
+    color: var(--text-main);
+    cursor: pointer;
+    font-size: 1.5rem;
+    display: flex;
+    align-items: center;
+}
+
+@media (max-width: 768px) {
+    .sidebar {
+        transform: translateX(-100%);
+        transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        width: 280px;
+        display: flex !important;
+    }
+
+    .sidebar.show {
+        transform: translateX(0);
+        box-shadow: 20px 0 50px rgba(0,0,0,0.5);
+    }
+
+    .sidebar .logo, .sidebar .nav-links span {
+        display: flex !important;
+    }
+
+    .main-content {
+        margin-left: 0;
+        width: 100%;
+        padding: 80px 1.25rem 100px 1.25rem;
+    }
+
+    .mobile-header {
+        display: flex;
+    }
+
+    .mobile-nav {
+        display: flex;
+    }
+
+    .grid-2 {
+        grid-template-columns: 1fr;
+    }
+
+    .billing-grid {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .ai-chat-bubble {
+        bottom: 100px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+    }
+
+    .card {
+        padding: 1.25rem;
+    }
+}
+
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 999;
+}
+
+.sidebar-overlay.show {
+    display: block;
 }
 
 /* --- AI Chat Assistant Styles --- */

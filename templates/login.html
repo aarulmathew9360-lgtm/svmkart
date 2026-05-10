@@ -3,27 +3,39 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SVMKART | Login</title>
+    <title>SVMKART | Premium Login</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://unpkg.com/lucide@latest"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body class="login-container">
+    <div class="login-bg">
+        <div class="floating-shape" style="width: 400px; height: 400px; top: -100px; left: -100px; opacity: 0.4;"></div>
+        <div class="floating-shape" style="width: 300px; height: 300px; bottom: -50px; right: -50px; opacity: 0.3; animation-delay: -5s;"></div>
+    </div>
+
     <div style="position: fixed; top: 1.5rem; right: 1.5rem; z-index: 1002;">
-        <button id="theme-toggle" class="btn btn-outline" style="padding: 0.5rem; border-radius: 50%; width: 40px; height: 40px; justify-content: center;">
+        <button id="theme-toggle" class="btn btn-outline" style="padding: 0.5rem; border-radius: 50%; width: 40px; height: 40px; justify-content: center; backdrop-filter: blur(10px);">
             <i data-lucide="moon" id="theme-icon"></i>
         </button>
     </div>
+
     <div class="card login-card animate-fade">
-        <div style="text-align: center; margin-bottom: 2rem;">
-            <div style="font-size: 2.5rem; font-weight: 800; background: linear-gradient(to right, #818cf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.5rem;">SVMKART</div>
-            <p style="color: var(--text-muted);">Access your billing dashboard</p>
+        <div style="text-align: center; margin-bottom: 3rem;">
+            <div style="display: flex; justify-content: center; margin-bottom: 1rem;">
+                <div style="width: 80px; height: 80px; background: rgba(79, 70, 229, 0.1); border-radius: 24px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border-glass); box-shadow: 0 10px 30px rgba(79, 70, 229, 0.2);">
+                    <i data-lucide="shield-check" style="width: 40px; height: 40px; color: var(--primary);"></i>
+                </div>
+            </div>
+            <h1 style="font-size: 2.25rem; font-weight: 800; letter-spacing: -0.05em; background: linear-gradient(to right, #818cf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 0.25rem;">SVMKART</h1>
+            <p style="color: var(--text-muted); font-size: 0.95rem; font-weight: 500;">Secure Portal Access</p>
         </div>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
           {% if messages %}
             {% for category, message in messages %}
-              <div class="badge badge-danger" style="margin-bottom: 1.5rem; text-align: center; display: block; padding: 0.5rem;">
+              <div style="background: rgba(239, 68, 68, 0.1); color: var(--danger); border: 1px solid rgba(239, 68, 68, 0.2); padding: 0.75rem; border-radius: 0.75rem; margin-bottom: 2rem; font-size: 0.85rem; font-weight: 600; text-align: center; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                <i data-lucide="alert-circle" style="width: 16px;"></i>
                 {{ message }}
               </div>
             {% endfor %}
@@ -32,24 +44,28 @@
 
         <form action="{{ url_for('login') }}" method="POST">
             <div class="form-group">
-                <label for="username">Username</label>
+                <label for="username" style="font-weight: 600; letter-spacing: 0.02em;">IDENTITY</label>
                 <div style="position: relative;">
                     <i data-lucide="user" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); width: 18px;"></i>
-                    <input type="text" id="username" name="username" placeholder="Enter username" style="padding-left: 3rem;" required>
+                    <input type="text" id="username" name="username" placeholder="Employee ID or Admin" style="padding-left: 3rem; background: rgba(0,0,0,0.2); border-radius: 12px; height: 55px;" required autofocus>
                 </div>
             </div>
-            <div class="form-group">
-                <label for="password">Password</label>
+            <div class="form-group" style="margin-bottom: 2rem;">
+                <label for="password" style="font-weight: 600; letter-spacing: 0.02em;">ACCESS KEY</label>
                 <div style="position: relative;">
-                    <i data-lucide="lock" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); width: 18px;"></i>
-                    <input type="password" id="password" name="password" placeholder="••••••••" style="padding-left: 3rem;" required>
+                    <i data-lucide="key" style="position: absolute; left: 1rem; top: 50%; transform: translateY(-50%); color: var(--text-muted); width: 18px;"></i>
+                    <input type="password" id="password" name="password" placeholder="••••••••" style="padding-left: 3rem; background: rgba(0,0,0,0.2); border-radius: 12px; height: 55px;" required>
                 </div>
             </div>
-            <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 1rem; padding: 1rem;">
-                <span>Sign In</span>
-                <i data-lucide="arrow-right"></i>
+            <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; height: 55px; border-radius: 12px; font-size: 1rem; font-weight: 700; box-shadow: 0 15px 30px rgba(79, 70, 229, 0.3);">
+                <span>Authorize & Enter</span>
+                <i data-lucide="chevron-right"></i>
             </button>
         </form>
+
+        <p style="text-align: center; margin-top: 2rem; font-size: 0.8rem; color: var(--text-muted); letter-spacing: 0.05em;">
+            AUTHENTICATION REQUIRED FOR SYSTEM ACCESS
+        </p>
     </div>
 
     <script>

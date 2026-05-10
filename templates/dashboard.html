@@ -6,16 +6,16 @@
 <div class="animate-fade">
     
     <!-- Premium Hero Section -->
-    <div style="margin-bottom: 2.5rem; display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, rgba(79, 70, 229, 0.1), rgba(124, 58, 237, 0.05)); padding: 2.5rem; border-radius: 1.5rem; border: 1px solid var(--border-glass); position: relative; overflow: hidden;">
+    <div class="mobile-hero" style="margin-bottom: 2.5rem; display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: center; justify-content: space-between; background: linear-gradient(135deg, rgba(79, 70, 229, 0.1), rgba(124, 58, 237, 0.05)); padding: 2rem; border-radius: 1.5rem; border: 1px solid var(--border-glass); position: relative; overflow: hidden;">
         <div style="position: absolute; top: -50px; right: -50px; width: 200px; height: 200px; background: var(--primary); filter: blur(100px); opacity: 0.1; z-index: 0;"></div>
         <div style="z-index: 1;">
-            <h1 style="font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; margin-bottom: 0.5rem;">
+            <h1 style="font-size: clamp(1.25rem, 5vw, 2rem); font-weight: 800; letter-spacing: -0.03em; margin-bottom: 0.5rem;">
                 <span style="color: var(--text-muted); font-weight: 400;">Good Day,</span> {{ current_user.username.title() }}! 👋
             </h1>
-            <p style="color: var(--text-muted); font-size: 1.05rem;">Manage your retail empire at **{{ settings.store_name }}** with real-time accuracy.</p>
+            <p style="color: var(--text-muted); font-size: 0.95rem;">Manage **{{ settings.store_name }}** with real-time accuracy.</p>
         </div>
-        <div style="display: flex; gap: 1rem; z-index: 1;">
-            <a href="{{ url_for('billing') }}" class="btn btn-primary" style="padding: 0.8rem 1.5rem; border-radius: 1rem; box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);">
+        <div style="display: flex; gap: 1rem; z-index: 1; width: 100%; max-width: fit-content;">
+            <a href="{{ url_for('billing') }}" class="btn btn-primary" style="padding: 0.8rem 1.5rem; border-radius: 1rem; box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3); width: 100%; justify-content: center;">
                 <i data-lucide="plus-circle"></i> <span data-i18n="billing">New Invoice</span>
             </a>
         </div>
@@ -65,9 +65,9 @@
         </div>
     </div>
 
-    <div class="grid grid-3" style="margin-top: 2.5rem; gap: 2rem;">
+    <div class="grid grid-dashboard-main" style="margin-top: 2.5rem; gap: 2rem;">
         <!-- Analytics Main -->
-        <div class="card" style="grid-column: span 2; padding: 2rem;">
+        <div class="card chart-card-dashboard" style="padding: 2rem;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
                 <div>
                     <h2 style="font-size: 1.25rem; font-weight: 800;">Financial Performance Matrix</h2>
@@ -164,7 +164,7 @@
                 <h2 style="font-size: 1.15rem; font-weight: 800;">Top Value Customers</h2>
                 <i data-lucide="award" style="color: var(--warning);"></i>
             </div>
-            <div class="table-container">
+            <div class="table-wrapper">
                 <table style="width: 100%;">
                     <thead>
                         <tr style="text-align: left; color: var(--text-muted); font-size: 0.8rem;">
