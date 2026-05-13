@@ -17,6 +17,7 @@
             <i data-lucide="menu"></i>
         </button>
         <div style="font-weight: 800; font-size: 1.2rem; background: linear-gradient(to right, #818cf8, #c084fc); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">SVMKART</div>
+        {% if current_user.is_authenticated %}
         <a href="{{ url_for('profile') }}">
             {% if current_user.profile_image and current_user.profile_image != 'default.png' %}
             <img src="{{ url_for('static', filename='uploads/profiles/' + current_user.profile_image) }}" alt="Avatar" style="width: 35px; height: 35px; border-radius: 50%; object-fit: cover; border: 2px solid rgba(255,255,255,0.1);">
@@ -24,13 +25,23 @@
             <img src="https://api.dicebear.com/7.x/initials/svg?seed={{ current_user.username }}" alt="Avatar" style="width: 35px; height: 35px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.1);">
             {% endif %}
         </a>
+        {% else %}
+        <a href="{{ url_for('login') }}" class="btn btn-primary" style="padding: 0.4rem 0.8rem; font-size: 0.8rem;">Login</a>
+        {% endif %}
     </div>
 
     <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
 
-    <aside class="sidebar" id="sidebar">
+    <aside class="sidebar {% if not current_user.is_authenticated %}hide{% endif %}" id="sidebar">
         <div class="logo">SVMKART</div>
         <ul class="nav-links">
+            <li>
+                <a href="{{ url_for('store') }}" class="{% if request.endpoint == 'store' %}active{% endif %}">
+                    <i data-lucide="shopping-bag"></i>
+                    <span data-i18n="store">Public Store</span>
+                </a>
+            </li>
+            {% if current_user.is_authenticated %}
             <li>
                 <a href="{{ url_for('dashboard') }}" class="{% if request.endpoint == 'dashboard' or request.endpoint == 'index' %}active{% endif %}" title="Dashboard [Alt+D]">
                     <i data-lucide="layout-dashboard"></i>
@@ -134,6 +145,7 @@
                 </a>
             </li>
             {% endif %}
+            {% endif %}
         </ul>
         <div style="padding: 1rem; border-top: 1px solid var(--border-glass);">
             <button id="theme-toggle" class="btn btn-outline" style="width: 100%; justify-content: center; margin-bottom: 0.5rem;">
@@ -145,17 +157,20 @@
                 <span id="lang-label">தமிழ்</span>
             </button>
         </div>
+        {% if current_user.is_authenticated %}
         <div class="logout-btn">
             <a href="{{ url_for('logout') }}" class="btn btn-outline" style="width: 100%; justify-content: center;">
                 <i data-lucide="log-out"></i>
                 <span data-i18n="logout">Logout</span>
             </a>
         </div>
+        {% endif %}
     </aside>
 
-    <main class="main-content">
+    <main class="main-content {% if not current_user.is_authenticated %}no-sidebar{% endif %}">
         <header style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
             <h1 style="font-size: 1.5rem;">{% block title %}Dashboard{% endblock %}</h1>
+            {% if current_user.is_authenticated %}
             <a href="{{ url_for('profile') }}" style="display: flex; align-items: center; gap: 1rem; text-decoration: none; color: inherit; cursor: pointer; transition: transform 0.2s ease;" onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
                 <span style="font-weight: 600;">{{ current_user.username }}</span>
                 {% if current_user.profile_image and current_user.profile_image != 'default.png' %}
@@ -164,6 +179,9 @@
                 <img src="https://api.dicebear.com/7.x/initials/svg?seed={{ current_user.username }}&backgroundColor=3b82f6,10b981,f59e0b&fontWeight=700" alt="Avatar" style="width: 40px; height: 40px; border-radius: 50%; box-shadow: 0 4px 10px rgba(0,0,0,0.2); border: 2px solid rgba(255,255,255,0.1);">
                 {% endif %}
             </a>
+            {% else %}
+            <a href="{{ url_for('login') }}" class="btn btn-primary">Staff Login</a>
+            {% endif %}
         </header>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -313,7 +331,8 @@
                 'logout': 'Logout',
                 'lang_label': 'தமிழ்',
                 'theme_dark': 'Dark Mode',
-                'theme_light': 'Light Mode'
+                'theme_light': 'Light Mode',
+                'store': 'Public Store'
             },
             'ta': {
                 'dashboard': 'டேஷ்போர்டு',
@@ -331,6 +350,7 @@
                 'lang_label': 'English',
                 'theme_dark': 'இருள் மோடு (Dark)',
                 'theme_light': 'வெளிச்ச மோடு (Light)',
+                'store': 'பொதுக் கடை',
                 'search_hint': 'தேடுக...',
                 'add_new': 'புதியது சேர்',
                 'total_amount': 'மொத்தத் தொகை',

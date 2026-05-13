@@ -82,6 +82,10 @@ body {
     scrollbar-color: var(--border-glass) transparent;
 }
 
+.sidebar.hide {
+    display: none;
+}
+
 .sidebar::-webkit-scrollbar {
     width: 4px;
 }
@@ -172,6 +176,11 @@ body {
     margin-left: 260px;
     padding: 2rem;
     width: calc(100% - 260px);
+}
+
+.main-content.no-sidebar {
+    margin-left: 0;
+    width: 100%;
 }
 
 /* Glass Cards */

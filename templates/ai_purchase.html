@@ -1,0 +1,178 @@
+{% extends 'base.html' %}
+
+{% block title %}AI Purchase Entry{% endblock %}
+
+{% block content %}
+<div class="animate-fade">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <div>
+            <h1 style="font-size: 1.5rem; font-weight: 800;">AI Vision Purchase</h1>
+            <p style="color: var(--text-muted); font-size: 0.875rem;">Take a photo of your supplier bill to update stock automatically.</p>
+        </div>
+        <a href="{{ url_for('products') }}" class="btn btn-outline">Back to Products</a>
+    </div>
+
+    <!-- Upload Section -->
+    <div id="upload-stage" class="card" style="text-align: center; padding: 4rem 2rem;">
+        <div style="max-width: 400px; margin: 0 auto;">
+            <div style="width: 80px; height: 80px; background: rgba(129, 140, 248, 0.1); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 2rem;">
+                <i data-lucide="camera" style="width: 32px; height: 32px; color: var(--primary);"></i>
+            </div>
+            <h2 style="font-size: 1.25rem; margin-bottom: 1rem;">Upload Purchase Bill</h2>
+            <p style="color: var(--text-muted); margin-bottom: 2rem;">Ensure the bill is flat and well-lit for better accuracy.</p>
+            
+            <input type="file" id="bill-input" accept="image/*" capture="environment" style="display: none;">
+            <button class="btn btn-primary" style="width: 100%; justify-content: center; padding: 1rem;" onclick="document.getElementById('bill-input').click()">
+                <i data-lucide="upload-cloud"></i>
+                <span>Choose Photo / Take Picture</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Loading State -->
+    <div id="loading-stage" class="card" style="display: none; text-align: center; padding: 5rem 2rem;">
+        <div class="animate-spin" style="margin-bottom: 2rem;">
+            <i data-lucide="refresh-cw" style="width: 48px; height: 48px; color: var(--primary);"></i>
+        </div>
+        <h2>Gemini is Analyzing...</h2>
+        <p style="color: var(--text-muted);">Extracting items and prices from your bill photo.</p>
+    </div>
+
+    <!-- Review Section -->
+    <div id="review-stage" style="display: none;">
+        <div class="card" style="margin-bottom: 2rem;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; border-bottom: 1px solid var(--border-glass); padding-bottom: 1.5rem;">
+                <div>
+                    <label style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Supplier Name</label>
+                    <h2 id="extracted-supplier" style="font-size: 1.5rem; font-weight: 800;">Loading...</h2>
+                </div>
+                <div style="text-align: right;">
+                    <label style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Bill Date</label>
+                    <p id="extracted-date" style="font-weight: 600;">2024-05-10</p>
+                </div>
+            </div>
+
+            <div class="table-wrapper">
+                <table id="items-table">
+                    <thead>
+                        <tr>
+                            <th>Item Name</th>
+                            <th>Quantity</th>
+                            <th>Unit Price (Buy)</th>
+                            <th>Subtotal</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="extracted-items-body">
+                        <!-- Items populated here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="margin-top: 2rem; display: flex; justify-content: flex-end; align-items: baseline; gap: 1rem;">
+                <span style="font-weight: 600; color: var(--text-muted);">Total Purchase:</span>
+                <span id="extracted-total" style="font-size: 2rem; font-weight: 800; color: var(--primary);">₹0.00</span>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 1rem;">
+            <button class="btn btn-outline" style="flex: 1; justify-content: center;" onclick="location.reload()">Discard & Retry</button>
+            <button id="confirm-btn" class="btn btn-primary" style="flex: 2; justify-content: center; padding: 1rem;" onclick="confirmPurchase()">
+                <i data-lucide="check-circle"></i>
+                <span>Confirm & Update Inventory</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let extractedData = null;
+
+    document.getElementById('bill-input').onchange = async function() {
+        const file = this.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('bill_photo', file);
+
+        document.getElementById('upload-stage').style.display = 'none';
+        document.getElementById('loading-stage').style.display = 'block';
+
+        try {
+            const response = await fetch('/api/ai/process-bill', {
+                method: 'POST',
+                body: formData
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                extractedData = data;
+                renderReview();
+            } else {
+                alert('Analysis failed: ' + data.message);
+                location.reload();
+            }
+        } catch (e) {
+            alert('Error connecting to AI server.');
+            location.reload();
+        }
+    };
+
+    function renderReview() {
+        document.getElementById('loading-stage').style.display = 'none';
+        document.getElementById('review-stage').style.display = 'block';
+
+        document.getElementById('extracted-supplier').innerText = extractedData.supplier || 'Unknown Supplier';
+        document.getElementById('extracted-date').innerText = extractedData.date || 'N/A';
+        document.getElementById('extracted-total').innerText = '₹' + parseFloat(extractedData.total).toFixed(2);
+
+        const body = document.getElementById('extracted-items-body');
+        body.innerHTML = '';
+
+        extractedData.items.forEach(item => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td style="font-weight: 600;">${item.name}</td>
+                <td>${item.qty}</td>
+                <td>₹${parseFloat(item.price).toFixed(2)}</td>
+                <td style="font-weight: 700;">₹${(item.qty * item.price).toFixed(2)}</td>
+                <td>
+                    <span class="badge ${item.is_new ? 'badge-warning' : 'badge-success'}">
+                        ${item.is_new ? 'New Product' : 'Matches Shop'}
+                    </span>
+                </td>
+            `;
+            body.appendChild(row);
+        });
+        
+        lucide.createIcons();
+    }
+
+    async function confirmPurchase() {
+        const btn = document.getElementById('confirm-btn');
+        btn.disabled = true;
+        btn.innerText = 'Updating Inventory...';
+
+        try {
+            const response = await fetch('/purchase/confirm-ai', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(extractedData)
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                alert(result.message);
+                window.location.href = "{{ url_for('products') }}";
+            } else {
+                alert('Confirmation failed: ' + result.message);
+                btn.disabled = false;
+                btn.innerText = 'Confirm & Update Inventory';
+            }
+        } catch (e) {
+            alert('Error updating inventory.');
+            btn.disabled = false;
+        }
+    }
+</script>
+{% endblock %}

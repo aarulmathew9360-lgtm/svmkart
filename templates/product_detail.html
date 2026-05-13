@@ -1,0 +1,263 @@
+{% extends 'store_base.html' %}
+
+{% block title %}{{ product.name }} | SVMKART{% endblock %}
+
+{% block content %}
+<style>
+    .product-container {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 4rem;
+        padding: 2rem 0;
+        align-items: start;
+    }
+
+    .product-gallery {
+        background: #0a0a0a;
+        border: 1px solid var(--border);
+        border-radius: 1.5rem;
+        overflow: hidden;
+        aspect-ratio: 1/1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+
+    .product-gallery img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: transform 0.5s;
+    }
+
+    .product-gallery:hover img {
+        transform: scale(1.02);
+    }
+
+    .info-section {
+        padding: 1rem 0;
+    }
+
+    .breadcrumb {
+        display: flex;
+        gap: 0.5rem;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        color: var(--text-muted);
+        margin-bottom: 2rem;
+    }
+
+    .breadcrumb a {
+        color: inherit;
+        text-decoration: none;
+    }
+
+    .breadcrumb a:hover {
+        color: var(--primary);
+    }
+
+    .price-tag {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #fff;
+        margin-bottom: 2rem;
+        display: flex;
+        align-items: baseline;
+        gap: 0.5rem;
+    }
+
+    .action-block {
+        background: rgba(255,255,255,0.02);
+        border: 1px solid var(--border);
+        padding: 2rem;
+        border-radius: 1.25rem;
+        margin-top: 3rem;
+    }
+
+    .qty-control {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        margin-bottom: 1.5rem;
+    }
+
+    .qty-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        border: 1px solid var(--border);
+        background: transparent;
+        color: #fff;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s;
+    }
+
+    .qty-btn:hover {
+        background: var(--primary);
+        border-color: var(--primary);
+    }
+
+    .specs-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        margin-top: 3rem;
+    }
+
+    .spec-box {
+        padding: 1rem;
+        border: 1px solid var(--border);
+        border-radius: 0.75rem;
+    }
+
+    .spec-box span {
+        display: block;
+        font-size: 0.7rem;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        margin-bottom: 0.25rem;
+    }
+
+    .spec-box p {
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    @media (max-width: 900px) {
+        .product-container { grid-template-columns: 1fr; gap: 2rem; }
+    }
+</style>
+
+<div class="container reveal">
+    <div class="breadcrumb">
+        <a href="{{ url_for('store') }}">Store</a>
+        <span>/</span>
+        <a href="{{ url_for('store', category=product.category) }}">{{ product.category }}</a>
+        <span>/</span>
+        <span style="color: #fff;">{{ product.name }}</span>
+    </div>
+
+    <div class="product-container">
+        <!-- Image -->
+        <div class="product-gallery">
+            {% if product.image_url %}
+            <img src="{{ url_for('static', filename=product.image_url) }}" alt="{{ product.name }}">
+            {% else %}
+            <i data-lucide="package" style="width: 80px; height: 80px; color: #1a1a1a;"></i>
+            {% endif %}
+            
+            {% if product.stock <= 0 %}
+            <div style="position: absolute; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); display: flex; align-items: center; justify-content: center;">
+                <span style="background: var(--accent); color: white; padding: 0.5rem 1.5rem; border-radius: 2rem; font-weight: 800; font-size: 0.8rem;">OUT OF STOCK</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Info -->
+        <div class="info-section">
+            <span style="color: var(--primary); font-weight: 800; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 2px;">{{ product.category }}</span>
+            <h1 style="font-size: 2.5rem; font-weight: 700; margin: 0.5rem 0 1rem; letter-spacing: -1px;">{{ product.name }}</h1>
+            
+            <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem;">
+                <div style="display: flex; gap: 2px; color: #fbbf24;">
+                    <i data-lucide="star" style="fill: #fbbf24; width: 14px;"></i>
+                    <i data-lucide="star" style="fill: #fbbf24; width: 14px;"></i>
+                    <i data-lucide="star" style="fill: #fbbf24; width: 14px;"></i>
+                    <i data-lucide="star" style="fill: #fbbf24; width: 14px;"></i>
+                    <i data-lucide="star" style="fill: #fbbf24; width: 14px; opacity: 0.3;"></i>
+                </div>
+                <span style="font-size: 0.8rem; color: var(--text-muted);">4.8 (85 Reviews)</span>
+            </div>
+
+            <p style="color: var(--text-muted); font-size: 1rem; line-height: 1.7; margin-bottom: 2rem;">
+                {{ product.description if product.description else 'Premium quality ' + product.name + ' designed for exceptional performance and durability. A perfect addition to your daily essentials.' }}
+            </p>
+
+            <div class="price-tag">
+                ₹{{ "{:,.2f}".format(product.price) }}
+                <span style="font-size: 0.9rem; font-weight: 400; color: var(--text-muted);">/ {{ product.unit }}</span>
+            </div>
+
+            <div class="action-block">
+                <div class="qty-control">
+                    <button class="qty-btn" onclick="updateQty(-1)"><i data-lucide="minus" style="width: 14px;"></i></button>
+                    <span id="qty-val" style="font-weight: 700; width: 20px; text-align: center;">1</span>
+                    <button class="qty-btn" onclick="updateQty(1)"><i data-lucide="plus" style="width: 14px;"></i></button>
+                </div>
+                
+                <button onclick="orderViaWhatsApp()" class="btn-primary" style="width: 100%; justify-content: center; padding: 1.25rem;">
+                    <i data-lucide="message-circle" style="width: 20px;"></i> Order via WhatsApp
+                </button>
+                
+                <p style="text-align: center; font-size: 0.75rem; color: var(--text-muted); margin-top: 1rem;">
+                    <i data-lucide="truck" style="width: 12px; vertical-align: middle;"></i> Free Delivery on orders above ₹500
+                </p>
+            </div>
+
+            <div class="specs-grid">
+                <div class="spec-box">
+                    <span>Availability</span>
+                    <p>{{ 'In Stock' if product.stock > 0 else 'Sold Out' }}</p>
+                </div>
+                <div class="spec-box">
+                    <span>Shipping</span>
+                    <p>Within 24 Hours</p>
+                </div>
+                <div class="spec-box">
+                    <span>Quality</span>
+                    <p>Verified Authentic</p>
+                </div>
+                <div class="spec-box">
+                    <span>Support</span>
+                    <p>24/7 Assistance</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Related Products -->
+    {% if related %}
+    <div style="margin-top: 8rem; padding-top: 4rem; border-top: 1px solid var(--border);">
+        <h2 style="font-size: 1.5rem; font-weight: 700; margin-bottom: 3rem;">You may also like</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 2rem;">
+            {% for p in related %}
+            <a href="{{ url_for('product_detail', product_id=p.id) }}" style="text-decoration: none; color: inherit;">
+                <div style="background: #0a0a0a; border: 1px solid var(--border); border-radius: 1rem; aspect-ratio: 1/1; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem; overflow: hidden;">
+                    {% if p.image_url %}
+                    <img src="{{ url_for('static', filename=p.image_url) }}" alt="{{ p.name }}" style="width: 100%; height: 100%; object-fit: cover;">
+                    {% else %}
+                    <i data-lucide="package" style="color: #1a1a1a;"></i>
+                    {% endif %}
+                </div>
+                <h3 style="font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem;">{{ p.name }}</h3>
+                <p style="font-weight: 700; color: #fff;">₹{{ p.price }}</p>
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    let qty = 1;
+    function updateQty(delta) {
+        qty = Math.max(1, qty + delta);
+        document.getElementById('qty-val').innerText = qty;
+    }
+
+    function orderViaWhatsApp() {
+        const storeName = "{{ settings.store_name }}";
+        const phone = "{{ settings.store_contact | wa_format }}";
+        const name = "{{ product.name }}";
+        const price = {{ product.price }};
+        const total = (price * qty).toFixed(2);
+        const msg = `Hi ${storeName}! ✨\n\nI want to buy:\n📦 *${name}*\n🔢 Qty: ${qty}\n💰 Total: ₹${total}\n\nPlease confirm.`;
+        window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+</script>
+{% endblock %}

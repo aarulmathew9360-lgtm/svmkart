@@ -24,6 +24,8 @@ genai.configure(api_key=os.environ.get("GEMINI_API_KEY", ""))
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'svmkart-secret-key-12345')
+app.config['UPLOAD_FOLDER'] = 'static/uploads/products'
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # Database Configuration (Environment Aware)
 LOCAL_DB = 'mysql+pymysql://root:Arul936%25@localhost/svmkart'
@@ -136,14 +138,20 @@ def wa_format(phone):
         return ""
     # Strip all non-numeric characters
     clean = "".join(filter(str.isdigit, str(phone)))
-    # If it's a 10 digit number, prepend 91.
+    
+    # Handle common cases
     if len(clean) == 10:
         return f"91{clean}"
-    elif clean.startswith("91") and len(clean) >= 12:
+    if clean.startswith("91") and len(clean) == 12:
         return clean
-    elif clean.startswith("0"):
+    if clean.startswith("0") and len(clean) == 11:
         return f"91{clean[1:]}"
-    return f"91{clean}"  # Fallback prepend 91
+        
+    # If it's already longer (maybe already has country code)
+    if len(clean) > 10:
+        return clean
+        
+    return clean
 
 @app.template_filter('wa_format')
 def wa_format_filter(phone):
@@ -438,14 +446,28 @@ def add_product():
         flash(f'Barcode {barcode} is already assigned to another product!', 'danger')
         return redirect(url_for('products'))
         
-    # Handle image upload
-    image_url = ''
-    if 'image' in request.files:
+    # Handle Image Upload or AI Image
+    image_url = None
+    remote_image_url = request.form.get('remote_image_url')
+    
+    if 'image' in request.files and request.files['image'].filename != '':
         file = request.files['image']
-        if file and file.filename:
-            filename = secure_filename(f"prod_{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}")
-            file.save(os.path.join('static/uploads/products', filename))
-            image_url = f'uploads/products/{filename}'
+        if file:
+            filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{file.filename}"
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+            image_url = f"uploads/products/{filename}"
+    elif remote_image_url:
+        try:
+            import requests
+            resp = requests.get(remote_image_url, timeout=10)
+            if resp.status_code == 200:
+                filename = f"ai_{datetime.now().strftime('%Y%m%d%H%M%S')}.jpg"
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                with open(filepath, 'wb') as f:
+                    f.write(resp.content)
+                image_url = f"uploads/products/{filename}"
+        except Exception as e:
+            print(f"AI Image Error: {e}")
 
     new_product = Product(
         name=name, 
@@ -496,12 +518,24 @@ def edit_product(product_id):
     product.unit = request.form.get('unit')
     
     # Handle image update
-    if 'image' in request.files:
+    remote_image_url = request.form.get('remote_image_url')
+    if 'image' in request.files and request.files['image'].filename != '':
         file = request.files['image']
-        if file and file.filename:
-            filename = secure_filename(f"prod_{product.id}_{file.filename}")
-            file.save(os.path.join('static/uploads/products', filename))
-            product.image_url = f'uploads/products/{filename}'
+        filename = secure_filename(f"prod_{product.id}_{file.filename}")
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+        product.image_url = f'uploads/products/{filename}'
+    elif remote_image_url:
+        try:
+            import requests
+            resp = requests.get(remote_image_url, timeout=10)
+            if resp.status_code == 200:
+                filename = f"ai_edit_{product.id}_{datetime.now().strftime('%Y%m%d%H%M%S')}.jpg"
+                filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+                with open(filepath, 'wb') as f:
+                    f.write(resp.content)
+                product.image_url = f"uploads/products/{filename}"
+        except Exception as e:
+            print(f"AI Edit Image Error: {e}")
     
     db.session.commit()
     flash(f'Product {product.name} updated successfully!', 'success')
@@ -1503,6 +1537,309 @@ def inward():
     all_suppliers = Supplier.query.all()
     all_products = Product.query.all()
     return render_template('inward.html', suppliers=all_suppliers, products=all_products)
+
+# --- Public Store ---
+@app.route('/store')
+def store():
+    category = request.args.get('category')
+    settings = Settings.query.first()
+    categories_query = db.session.query(Product.category).distinct().all()
+    categories = [c[0] for c in categories_query if c[0]]
+    
+    if category:
+        products = Product.query.filter_by(category=category).all()
+    else:
+        products = Product.query.all()
+        
+    return render_template('store.html', 
+                           products=products, 
+                           categories=categories, 
+                           current_category=category,
+                           settings=settings)
+
+@app.route('/api/customer/points')
+def get_customer_points():
+    phone = request.args.get('phone')
+    if not phone:
+        return jsonify({'success': False, 'message': 'Phone required'})
+    
+    customer = Customer.query.filter(Customer.phone.like(f"%{phone}%")).first()
+    if customer:
+        return jsonify({'success': True, 'points': customer.points, 'name': customer.name})
+    return jsonify({'success': False, 'message': 'Customer not found'})
+
+@app.route('/store/product/<int:product_id>')
+def product_detail(product_id):
+    product = Product.query.get_or_404(product_id)
+    settings = Settings.query.first()
+    # Get related products (same category)
+    related = Product.query.filter(Product.category == product.category, Product.id != product.id).limit(4).all()
+    return render_template('product_detail.html', product=product, settings=settings, related=related)
+
+@app.route('/purchase/ai-entry')
+@login_required
+@admin_required
+def ai_purchase_entry():
+    return render_template('ai_purchase.html')
+
+@app.route('/api/ai/process-bill', methods=['POST'])
+@login_required
+def process_bill_image():
+    if 'bill_photo' not in request.files:
+        return jsonify({'success': False, 'message': 'No photo uploaded'})
+    
+    file = request.files['bill_photo']
+    if file.filename == '':
+        return jsonify({'success': False, 'message': 'No photo selected'})
+
+    # Temporary save for vision processing
+    temp_path = os.path.join(tempfile.gettempdir(), f"bill_{datetime.now().timestamp()}.jpg")
+    file.save(temp_path)
+
+    try:
+        # Get list of existing products for context
+        all_products = Product.query.all()
+        product_list_str = ", ".join([p.name for p in all_products])
+
+        # Auto-detect available models
+        available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        
+        # Priority models
+        priority = ['models/gemini-1.5-flash', 'models/gemini-1.5-pro', 'models/gemini-pro-vision']
+        target_models = [m for m in priority if m in available_models]
+        if not target_models:
+            target_models = [m for m in available_models if 'vision' in m.lower() or 'flash' in m.lower()]
+        
+        if not target_models:
+            target_models = available_models[:1] if available_models else []
+            
+        response = None
+        error_logs = []
+        
+        # Read image data
+        with open(temp_path, 'rb') as f:
+            image_data = f.read()
+        
+        image_parts = [{"mime_type": "image/jpeg", "data": image_data}]
+        
+        for m_name in target_models:
+            try:
+                model = genai.GenerativeModel(m_name)
+                prompt = f"""
+                Extract data from this purchase note/bill image.
+                SHOP PRODUCTS: [{product_list_str}]
+                
+                RULES:
+                1. If supplier_name is missing, use "General Supplier".
+                2. If price/rate is missing, use 0.0 (it will be matched to existing buy_price).
+                3. Parse quantities like '2kg' as 2.
+                4. Match item names to the SHOP PRODUCTS list provided above.
+                
+                Return JSON:
+                {{
+                    "supplier_name": "Shop Name or General Supplier",
+                    "date": "YYYY-MM-DD or current date",
+                    "items": [
+                        {{"name": "Matched Product Name", "qty": 2, "price": 0.0}}
+                    ],
+                    "total": 0.0
+                }}
+                Only return JSON.
+                """
+                response = model.generate_content([prompt, image_parts[0]])
+                if response and response.text:
+                    break
+            except Exception as inner_e:
+                error_logs.append(f"{m_name}: {str(inner_e)}")
+                continue
+
+        if not response:
+            return jsonify({'success': False, 'message': f'Models failed. Errors: {"; ".join(error_logs)}'})
+        
+        # Parse JSON from response
+        raw_text = response.text.strip()
+        # Remove markdown if present
+        if raw_text.startswith("```json"):
+            raw_text = raw_text[7:-3].strip()
+        elif raw_text.startswith("```"):
+            raw_text = raw_text[3:-3].strip()
+            
+        data = json.loads(raw_text)
+        
+        # Find matches in our database
+        processed_items = []
+        for item in data.get('items', []):
+            match = Product.query.filter(Product.name.like(f"%{item['name']}%")).first()
+            processed_items.append({
+                'name': item['name'],
+                'qty': item['qty'],
+                'price': item['price'],
+                'product_id': match.id if match else None,
+                'is_new': match is None
+            })
+        
+        return jsonify({
+            'success': True, 
+            'supplier': data.get('supplier_name'),
+            'date': data.get('date'),
+            'total': data.get('total'),
+            'items': processed_items
+        })
+
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+    finally:
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+
+@app.route('/purchase/confirm-ai', methods=['POST'])
+@login_required
+@admin_required
+def confirm_ai_purchase():
+    data = request.json
+    supplier_name = data.get('supplier')
+    
+    # 1. Handle Supplier
+    supplier = Supplier.query.filter_by(name=supplier_name).first()
+    if not supplier:
+        supplier = Supplier(name=supplier_name)
+        db.session.add(supplier)
+        db.session.flush()
+    
+    # 2. Create Purchase
+    purchase_no = f"PUR-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+    purchase = Purchase(
+        purchase_no=purchase_no,
+        supplier_id=supplier.id,
+        total_amount=data.get('total', 0)
+    )
+    db.session.add(purchase)
+    db.session.flush()
+    
+    # 3. Add Items & Update Stock
+    for item in data.get('items', []):
+        prod_id = item.get('product_id')
+        if not prod_id:
+            # Create new product if it doesn't exist
+            new_prod = Product(
+                name=item['name'],
+                buy_price=item['price'],
+                price=item['price'] * 1.2, # Default 20% margin
+                stock=0
+            )
+            db.session.add(new_prod)
+            db.session.flush()
+            prod_id = new_prod.id
+        
+        p_item = PurchaseItem(
+            purchase_id=purchase.id,
+            product_id=prod_id,
+            quantity=item['qty'],
+            buy_price=item['price'],
+            subtotal=item['qty'] * item['price']
+        )
+        db.session.add(p_item)
+        
+        # Update stock
+        product = Product.query.get(prod_id)
+        product.stock += item['qty']
+        product.buy_price = item['price']
+        
+        # Log stock
+        log = StockLog(
+            product_id=prod_id,
+            user_id=current_user.id,
+            change_qty=item['qty'],
+            reason=f"AI Purchase {purchase_no}"
+        )
+        db.session.add(log)
+        
+    db.session.commit()
+    return jsonify({'success': True, 'message': 'Inventory updated successfully!'})
+
+@app.route('/api/ai/generate-description', methods=['POST'])
+@login_required
+def generate_product_description():
+    data = request.json
+    product_name = data.get('name')
+    if not product_name:
+        return jsonify({'success': False, 'message': 'Product name required'})
+    
+    try:
+        # Auto-detect available models
+        available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        priority = ['models/gemini-1.5-flash', 'models/gemini-1.5-pro', 'models/gemini-1.0-pro']
+        target_models = [m for m in priority if m in available_models]
+        if not target_models: target_models = available_models[:1]
+
+        prompt = f"Write a professional, 2-sentence marketing description for a product named '{product_name}'. Make it sound premium and attractive for an e-commerce store. Only return the description text."
+        
+        response = None
+        for m_name in target_models:
+            try:
+                model = genai.GenerativeModel(m_name)
+                response = model.generate_content(prompt)
+                if response and response.text: break
+            except: continue
+            
+        if not response:
+            return jsonify({'success': False, 'message': 'AI Models unavailable'})
+
+        return jsonify({'success': True, 'description': response.text.strip()})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/ai/store-chat', methods=['POST'])
+def store_chat():
+    data = request.json
+    user_query = data.get('query')
+    if not user_query:
+        return jsonify({'success': False, 'message': 'Query required'})
+    
+    try:
+        # Get products for context
+        products = Product.query.all()
+        inventory_context = "\n".join([f"- {p.name}: ₹{p.price} ({p.stock} in stock, Category: {p.category})" for p in products])
+        
+        settings = Settings.query.first()
+        store_name = settings.store_name if settings else "SVMKART"
+
+        # Auto-detect available models
+        available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        priority = ['models/gemini-1.5-flash', 'models/gemini-1.5-pro', 'models/gemini-1.0-pro']
+        target_models = [m for m in priority if m in available_models]
+        if not target_models: target_models = available_models[:1]
+
+        prompt = f"""
+        You are '{store_name} AI Assistant'. Be helpful, polite, and professional. 
+        Answer the customer's question based on our current inventory:
+        {inventory_context}
+        
+        Rules:
+        1. If they ask for something we HAVE, mention the price and availability.
+        2. If they ask for something we DONT have, politely suggest something similar from our inventory.
+        3. Keep answers concise (max 3 sentences).
+        4. Mention that they can order via WhatsApp by clicking the 'Buy' button on product pages.
+        
+        Customer Query: {user_query}
+        """
+        
+        response = None
+        error_logs = []
+        for m_name in target_models:
+            try:
+                model = genai.GenerativeModel(m_name)
+                response = model.generate_content(prompt)
+                if response and response.text: break
+            except Exception as e:
+                error_logs.append(f"{m_name}: {str(e)}")
+        
+        if not response:
+            return jsonify({'success': False, 'message': f'AI unavailable. Errors: {error_logs}'})
+
+        return jsonify({'success': True, 'response': response.text.strip()})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
 
 @app.errorhandler(500)
 def handle_500(e):

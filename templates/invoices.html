@@ -54,10 +54,13 @@
                                 <i data-lucide="eye" style="width: 16px;"></i>
                             </a>
                             <div style="width: 1px; background: var(--border-glass); margin: 0 0.25rem;"></div>
-                            <!-- View Routes (HTML Print Preview) -->
-                            <a href="{{ url_for('invoice_pdf_view', invoice_id=invoice.id) }}" target="_blank" class="btn btn-outline" style="padding: 0.4rem; border-radius: 0.4rem;" title="Print Preview (A4)">
-                                <i data-lucide="eye" style="width: 16px;"></i>
+                            <!-- WhatsApp Share -->
+                            {% if invoice.customer and invoice.customer.phone %}
+                            <a href="https://wa.me/{{ invoice.customer.phone | wa_format }}?text=Hi {{ invoice.customer.name }}, here is your invoice {{ invoice.invoice_no }} from {{ settings.store_name }}. Total Amount: ₹{{ invoice.final_amount }}. Thank you!" 
+                               target="_blank" class="btn" style="padding: 0.4rem; border-radius: 0.4rem; background: #25D366; color: white;" title="Share on WhatsApp">
+                                <i data-lucide="message-circle" style="width: 16px;"></i>
                             </a>
+                            {% endif %}
                         </div>
                         </td>
                     </tr>

@@ -19,6 +19,10 @@
                 <i data-lucide="upload"></i>
                 <span>Import CSV</span>
             </button>
+            <button class="btn btn-outline" style="border-color: #818cf8; color: #818cf8;" onclick="window.location.href='{{ url_for('ai_purchase_entry') }}'">
+                <i data-lucide="sparkles"></i>
+                <span>AI Bill Entry</span>
+            </button>
             <button class="btn btn-primary" onclick="document.getElementById('add-product-modal').style.display='flex'">
                 <i data-lucide="plus"></i>
                 <span>Add Product</span>
@@ -88,7 +92,7 @@
                                    <i data-lucide="printer" style="width: 18px; color: var(--success);"></i>
                                 </a>
                                 <a href="javascript:void(0)" 
-                                   onclick="openEditModal('{{ product.id }}', '{{ product.name }}', '{{ product.category }}', '{{ product.price }}', '{{ product.stock }}', '{{ product.unit }}', '{{ product.barcode }}', '{{ product.image_url }}')"
+                                   onclick='openEditModal("{{ product.id }}", {{ product.name | tojson }}, {{ product.category | tojson }}, "{{ product.price }}", "{{ product.stock }}", {{ product.unit | tojson }}, "{{ product.barcode }}", "{{ product.image_url }}", {{ (product.description or "") | tojson }})'
                                    style="color: var(--accent);" title="Edit Product">
                                    <i data-lucide="edit-3" style="width: 18px;"></i>
                                 </a>
@@ -119,16 +123,29 @@
             <i data-lucide="x" style="cursor: pointer; color: var(--text-muted);" onclick="document.getElementById('add-product-modal').style.display='none'"></i>
         </div>
         <form action="{{ url_for('add_product') }}" method="POST" enctype="multipart/form-data">
-            <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem;">
-                <div class="form-group" style="flex: 1;">
-                    <label>Product Image</label>
-                    <input type="file" name="image" accept="image/*" style="padding: 0.5rem; border: 1.5px dashed var(--border-glass); background: rgba(255,255,255,0.05);">
+            <div style="display: flex; gap: 1rem; margin-bottom: 1.5rem; align-items: center; background: rgba(0,0,0,0.05); padding: 1rem; border-radius: 0.75rem;">
+                <div class="form-group" style="flex: 1; margin: 0;">
+                    <label style="font-size: 0.75rem;">Manual Upload</label>
+                    <input type="file" name="image" accept="image/*" style="font-size: 0.8rem;">
                 </div>
+                <div style="text-align: center; width: 100px;">
+                    <div id="ai-add-preview-container" style="position: relative; width: 60px; height: 60px; margin: 0 auto;">
+                        <img id="ai-add-preview" src="https://api.dicebear.com/7.x/shapes/svg?seed=new" style="width: 60px; height: 60px; border-radius: 8px; object-fit: cover; border: 1.5px solid var(--border-glass);">
+                        <div id="ai-add-loader" style="display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; border-radius: 8px;">
+                            <i data-lucide="loader-2" class="animate-spin" style="width: 20px;"></i>
+                        </div>
+                    </div>
+                </div>
+                <input type="hidden" name="remote_image_url" id="remote_image_url_add">
+                <button type="button" onclick="generateAIImage('add')" class="btn btn-outline" style="padding: 0.5rem; border-color: #818cf8; color: #818cf8;" title="Generate AI Image">
+                    <i data-lucide="sparkles"></i>
+                    <span style="font-size: 0.7rem;">Magic AI</span>
+                </button>
             </div>
 
             <div class="form-group">
                 <label>Product Name</label>
-                <input type="text" name="name" required placeholder="e.g. Wireless Mouse">
+                <input type="text" name="name" id="add-product-name" required placeholder="e.g. Wireless Mouse">
             </div>
             <div class="form-group">
                 <label>Barcode (Leave blank to auto-generate)</label>
@@ -166,6 +183,15 @@
                     <option value="box">Box</option>
                     <option value="pkt">Packet</option>
                 </select>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <div style="position: relative;">
+                    <textarea name="description" id="add-product-desc" rows="3" placeholder="Tell customers about this product..." style="width: 100%; padding: 1rem; border-radius: 0.75rem; border: 1.5px solid var(--border-glass); background: rgba(0,0,0,0.02); color: var(--text-main); font-family: inherit; font-size: 0.9rem;"></textarea>
+                    <button type="button" onclick="generateAIDescription('add')" style="position: absolute; bottom: 0.75rem; right: 0.75rem; background: var(--primary); color: white; border: none; padding: 0.35rem 0.75rem; border-radius: 2rem; font-size: 0.7rem; cursor: pointer; display: flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 10px rgba(129, 140, 248, 0.3);">
+                        <i data-lucide="sparkles" style="width: 12px;"></i> Magic Desc
+                    </button>
+                </div>
             </div>
             <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 1rem; padding: 1rem;">
                 <span>Create Product</span>
@@ -212,12 +238,22 @@
         <form id="edit-product-form" method="POST" enctype="multipart/form-data">
             <div style="display: flex; gap: 1rem; margin-bottom: 2rem; align-items: center; background: rgba(0,0,0,0.05); padding: 1rem; border-radius: 0.75rem;">
                 <div style="flex: 1;">
-                    <label>Change Product Image</label>
+                    <label style="font-size: 0.75rem;">Manual Upload</label>
                     <input type="file" name="image" accept="image/*" style="font-size: 0.8rem;">
                 </div>
-                <div id="edit-image-preview">
-                    <img src="" id="edit-preview-img" style="width: 60px; height: 60px; border-radius: 8px; object-fit: cover; border: 1.5px solid var(--primary); background: white;">
+                <div style="text-align: center; width: 100px;">
+                    <div id="ai-edit-preview-container" style="position: relative; width: 60px; height: 60px; margin: 0 auto;">
+                        <img src="" id="edit-preview-img" style="width: 60px; height: 60px; border-radius: 8px; object-fit: cover; border: 1.5px solid var(--primary); background: white;">
+                        <div id="ai-edit-loader" style="display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; border-radius: 8px;">
+                            <i data-lucide="loader-2" class="animate-spin" style="width: 20px;"></i>
+                        </div>
+                    </div>
                 </div>
+                <input type="hidden" name="remote_image_url" id="remote_image_url_edit">
+                <button type="button" onclick="generateAIImage('edit')" class="btn btn-outline" style="padding: 0.5rem; border-color: #818cf8; color: #818cf8;" title="Generate AI Image">
+                    <i data-lucide="sparkles"></i>
+                    <span style="font-size: 0.7rem;">Magic AI</span>
+                </button>
             </div>
 
             <div class="form-group">
@@ -251,6 +287,15 @@
                     <option value="box">Box</option>
                     <option value="pkt">Packet</option>
                 </select>
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <div style="position: relative;">
+                    <textarea name="description" id="edit-product-desc" rows="3" placeholder="Update product description..." style="width: 100%; padding: 1rem; border-radius: 0.75rem; border: 1.5px solid var(--border-glass); background: rgba(0,0,0,0.02); color: var(--text-main); font-family: inherit; font-size: 0.9rem;"></textarea>
+                    <button type="button" onclick="generateAIDescription('edit')" style="position: absolute; bottom: 0.75rem; right: 0.75rem; background: var(--primary); color: white; border: none; padding: 0.35rem 0.75rem; border-radius: 2rem; font-size: 0.7rem; cursor: pointer; display: flex; align-items: center; gap: 0.35rem; box-shadow: 0 4px 10px rgba(129, 140, 248, 0.3);">
+                        <i data-lucide="sparkles" style="width: 12px;"></i> Magic Desc
+                    </button>
+                </div>
             </div>
             <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 1rem; padding: 1rem;">
                 <span>Update Specifications</span>
@@ -288,7 +333,7 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
 <script>
-    function openEditModal(id, name, category, price, stock, unit, barcode, imageUrl) {
+    function openEditModal(id, name, category, price, stock, unit, barcode, imageUrl, description) {
         const modal = document.getElementById('edit-product-modal');
         const form = document.getElementById('edit-product-form');
         
@@ -299,6 +344,7 @@
         document.getElementById('edit-stock').value = stock;
         document.getElementById('edit-unit').value = unit;
         document.getElementById('edit-barcode').value = barcode !== 'None' ? barcode : '';
+        document.getElementById('edit-product-desc').value = (description && description !== 'None') ? description : '';
         
         // Image preview
         const previewImg = document.getElementById('edit-preview-img');
@@ -359,6 +405,93 @@
                 setTimeout(() => { document.getElementById('stock-val-' + prodId).style.color = 'inherit'; }, 500);
             }
         });
+    }
+
+    async function generateAIImage(type) {
+        const nameInput = type === 'add' ? document.getElementById('add-product-name') : document.getElementById('edit-name');
+        const name = nameInput.value.trim();
+        
+        if (!name) {
+            alert('Please enter a product name first!');
+            nameInput.focus();
+            return;
+        }
+
+        const loader = document.getElementById(`ai-${type}-loader`);
+        const preview = type === 'add' ? document.getElementById('ai-add-preview') : document.getElementById('edit-preview-img');
+        const hiddenInput = document.getElementById(`remote_image_url_${type}`);
+
+        loader.style.display = 'flex';
+        
+        // Simpler prompt for faster generation and better reliability
+        const prompt = encodeURIComponent(`${name} product photo, professional studio lighting, white background, high resolution`);
+        const seed = Math.floor(Math.random() * 1000000);
+        // Using a reliable URL format for Pollinations
+        const aiUrl = `https://image.pollinations.ai/prompt/${prompt}?width=512&height=512&nologo=true&seed=${seed}&model=flux`;
+
+        // We pre-load the image to show the loader
+        const img = new Image();
+        img.onload = function() {
+            console.log("Successfully loaded image from: " + img.src);
+            preview.src = img.src;
+            hiddenInput.value = img.src;
+            loader.style.display = 'none';
+        };
+        img.onerror = function() {
+            console.error("AI Server failed: " + img.src);
+            // Fallback 1: LoremFlickr (Using only product name for better compatibility)
+            const backupUrl = `https://loremflickr.com/800/800/${encodeURIComponent(name)}`;
+            img.onerror = function() {
+                console.error("LoremFlickr failed: " + backupUrl);
+                // Fallback 2: Dummy Image (Simple & Always Works)
+                const dummyUrl = `https://dummyimage.com/800x800/18181b/fafafa&text=${encodeURIComponent(name)}`;
+                img.onerror = function() {
+                    console.error("DummyImage failed: " + dummyUrl);
+                    // Fallback 3: Initials (Absolute Last Resort)
+                    const initialUrl = `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`;
+                    preview.src = initialUrl;
+                    hiddenInput.value = initialUrl;
+                    loader.style.display = 'none';
+                };
+                img.src = dummyUrl;
+            };
+            img.src = backupUrl;
+        };
+        img.src = aiUrl;
+    }
+    async function generateAIDescription(mode) {
+        const nameInput = document.getElementById(`${mode}-product-name`) || document.getElementById(`edit-name`);
+        const descInput = document.getElementById(`${mode}-product-desc`) || document.getElementById(`edit-product-desc`);
+        const name = nameInput.value;
+
+        if (!name) {
+            alert('Please enter a product name first!');
+            return;
+        }
+
+        const originalPlaceholder = descInput.placeholder;
+        descInput.placeholder = 'Generating magic description...';
+        descInput.disabled = true;
+
+        try {
+            const response = await fetch('/api/ai/generate-description', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: name })
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                descInput.value = data.description;
+            } else {
+                alert('Description generation failed: ' + data.message);
+            }
+        } catch (e) {
+            alert('Error connecting to AI server.');
+        } finally {
+            descInput.placeholder = originalPlaceholder;
+            descInput.disabled = false;
+        }
     }
 </script>
 {% endblock %}
